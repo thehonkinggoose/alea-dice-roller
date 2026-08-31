@@ -1,0 +1,196 @@
+import { n as require_jsx_runtime } from "../_libs/radix-ui__react-context+react.mjs";
+import { t as DocsPage } from "./DocsPage-D_BB1U6G.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/UserGuide-CSOSLwRQ.js
+var import_jsx_runtime = require_jsx_runtime();
+function UserGuide() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DocsPage, {
+		eyebrow: "Guide",
+		title: "How the table works",
+		headingId: "guide-heading",
+		lede: "Alea is a dice caster. You write a pool, load the table or leave it fair, and read every face. History stays on this device. Nothing is sent to a server.",
+		sections: [
+			{
+				id: "at-a-glance",
+				title: "The table at a glance",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "The first heading on every page is Alea. Under it, the primary navigation has five tabs: Table, Guide, FAQ, Keys, and Tests. The Table tab is the caster. This Guide explains it. FAQ answers short questions. Keys is a JAWS Professional 2026 tutorial. Tests is the live Assay — the same unit tests the table is proved with." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "On the Table tab the page is split into landmarks a screen reader can list: Last cast, Session statistics, Pool, Randomness, and Results. Pool is the dice you will throw. Last cast is the most recent result. Randomness is luck, chaos, streak, and seed. Results is the session log." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "A skip link sits at the top of the document: “Skip to main content.” It is the first Tab stop." })
+				] })
+			},
+			{
+				id: "pool",
+				title: "Building a pool",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+						"A pool is one expression, like ",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "font-mono text-foreground",
+							children: "2d6+3"
+						}),
+						" — two six-sided dice plus three. The live readout under the Pool heading always names what the next Roll will actually cast. If the readout and the steppers ever disagree, trust the readout."
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Notation"
+					}), " is the written form. Letters are case-insensitive. Spaces are ignored. Unicode minuses paste as subtraction."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+						className: "list-disc space-y-1 pl-5",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "d20"
+							}), " is one twenty-sided die. Omitting the count means 1."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "2d6+3"
+							}), " is two sixes plus a flat 3."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "2d20kh1"
+							}), " is advantage: two d20s, keep the higher."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "2d20kl1"
+							}), " is disadvantage: keep the lower."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "4d6dl1"
+							}), " is four d6, drop the lowest (keep 3 high)."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "3d6!"
+							}), " explodes. A bang after a die means: if that die shows its highest face, roll it again and add the new roll. Chains stop after 24 extras."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-mono text-foreground",
+								children: "1d20+1d4"
+							}), " is a mixed, compound pool. Steppers lock."] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "font-mono text-foreground",
+									children: "d%"
+								}),
+								" and ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "font-mono text-foreground",
+									children: "d100"
+								}),
+								" are the same hundred-sider. ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "font-mono text-foreground",
+									children: "dF"
+								}),
+								" is a three-faced stand-in, not a true Fudge die."
+							] })
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Limits: at most 100 dice, 1000 faces, and a modifier from −99 to +99. Past those, Roll waits and the live readout names the problem." })
+				] })
+			},
+			{
+				id: "steppers-and-keep",
+				title: "Steppers, Keep, and exploding",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "On a simple pool (one die type, valid notation) the steppers drive the expression: Dice, Sides, Modifier, Repeat, and How many. Decrease and Increase name the current value. Arrow keys, Home, and End work when a stepper button is focused." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Keep"
+					}), " decides which faces count. Keep all counts every die. High keeps the best — advantage is two d20s, keep 1 high. Low keeps the worst. High and Low need two or more dice; a single die stays on Keep all. How many is how many faces still count when High or Low is on."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+						"Typing ",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "font-mono text-foreground",
+							children: "1d20kh1"
+						}),
+						" on a single die is a no-op keep. The live readout warns that keep needs two dice, and the store maps it to Keep all."
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Exploding"
+					}), " is a switch. When on, a die that lands on its highest face is rolled again and the extra face is added. A bang in the notation turns it on. Typing a new expression without a bang turns it off. On a mixed pool the switch follows the bangs and locks, because some dice may explode and others may not."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Repeat"
+					}), " is casts in one click. Stats uses 6. Repeat is independent of the notation string. A Repeat batch freezes streak: all six scores use the curve from before the click, so they do not feed each other."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Die chips (d4 through d100) select the size of a simple pool. On a mixed or invalid pool they are rebuild actions: they start a fresh 1dN, reset Keep, exploding, and modifier, and keep Repeat." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Presets are ready-made pools. Adv is advantage. Dis is disadvantage. Stats is six ability scores. Each preset also sets Repeat." })
+				] })
+			},
+			{
+				id: "casting",
+				title: "Casting",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Roll"
+					}), " casts the pool shown above it. If Repeat is 6 it reads Roll ×6. Enter in the notation field submits the same form. Spacebar also casts, except when a field, switch, slider, button, link, or radio is focused — those keep Space for themselves. If the pool is invalid, Roll is disabled and named “Roll, waits for a valid pool.”"] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Screen reader users should prefer the Roll button. In JAWS browse mode, Space belongs to JAWS, not to the caster. The Keys tab walks this in detail." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Reroll"
+					}), " casts the last result’s expression once with the current luck, chaos, streak, and seed. It does not rewrite this pool. A Reroll on a results row does the same for that row. Repeat is ignored: reroll is always one cast."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Copy"
+					}), " puts the last line on the clipboard as text. Each results row has its own Copy."] })
+				] })
+			},
+			{
+				id: "reading",
+				title: "Reading a result",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Last cast shows the total, then each die. Faded dice were dropped by Keep and are named “dropped, not counted.” An exploded face is named “exploded.” A subtracted die is named with “minus.” Expected is the average total for this pool with the luck, chaos, and streak that were on for this roll — not a promise of the next one." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Session statistics summarize this table: how many casts, mean total, mean expected, high, low, max faces (a kept die showed its highest face), and ones (a kept die showed a 1)." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "On a wide screen, Results is a real table with headers, a caption, and the notation as the row title. On a phone, each roll is a named card so a screen reader still gets labels — a CSS-stacked table would have lost its rows. Factor chips (L, C, S, seed) name luck, chaos, streak, or a locked seed. Fair means none of those were on." })
+				] })
+			},
+			{
+				id: "randomness",
+				title: "Luck, chaos, streak, and seed",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Fair is chaos 50 with luck and streak at 0. If the lab says fair, the engine is fair. A factor below 1% snaps to fair so a dusty slider cannot load the table in secret." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Luck"
+					}), " biases faces high or low. At +100 a d20 averages about 16 instead of 10.5. Unlucky tilts toward 1."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Chaos"
+					}), " at 50 is even odds. Lower bunches near the middle. Higher makes crits and fumbles more common."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Streak"
+					}), " reads up to five recent totals against their expected values. Momentum keeps a hot streak hot. Revert makes the next rolls go cold. If there is no history, streak waits. If recent totals sit on expected, streak is armed but not tilting yet. Repeat does not feed streak inside one click."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "The curve chart is the odds of each face on the primary die. Pool E is the average total the table will compare against — keep, explode, and extra dice are included." }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+						className: "font-medium text-foreground",
+						children: "Seed"
+					}), " is an optional phrase that can replay the same sequence of faces. Lock it on after typing a seed. Editing the seed restarts the sequence from the beginning. Unlocked uses the browser’s cryptographic RNG — true random, not repeatable. Fair resets luck, chaos, and streak; the seed and stream are kept."] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Lab copy describes the next roll. Tray chips describe the last one. Those can differ if you moved a slider after you cast." })
+				] })
+			},
+			{
+				id: "history",
+				title: "History, export, and this device",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Up to 200 rolls stay in this browser under a local key. There is no account and no cross-device sync. Clear wipes this session from this device. Export downloads a CSV of time, notation, faces, kept, dropped, modifier, total, expected, and the factors that were on." }) })
+			},
+			{
+				id: "compound-and-invalid",
+				title: "When the steppers lock",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "A mixed pool (more than one die type) or an illegal expression locks Dice, Sides, Modifier, Keep, exploding, and How many. They show a dash so a leftover simple pool cannot pretend to still apply. Repeat still works. A die chip starts a fresh 1dN from that size. The live readout stays on the string you typed until the pool is valid again." }) })
+			},
+			{
+				id: "keyboard-and-readers",
+				title: "Keyboard and screen readers",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Everything on the table is reachable without a pointer. Tab moves through controls. Keep and Die are radio groups: arrows, Home, and End move the selection. Steppers accept arrows, Home, and End. Sliders are native ranges with a spoken value. Switches announce pressed or not pressed." }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Labels stay in small caps visually; a screen reader hears them in normal case — Table, not TABLE. The Keys tab is a full tutorial for JAWS Professional 2026, including Virtual Cursor, Forms Mode, and why Space-to-roll must not be used in browse mode." })] })
+			},
+			{
+				id: "assay",
+				title: "Assay",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "The Tests tab runs the same catalog the command-line runner uses. Open a case for the description, why it exists, every assertion with expected versus actual, the log, and the raw technical record. Browser-only cases skip in the shell and run here." }) })
+			}
+		]
+	});
+}
+//#endregion
+export { UserGuide as t };

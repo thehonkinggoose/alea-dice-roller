@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Alea",
+      "hasCanvas": false,
+      "bodyTextLen": 3301,
+      "bodyTextHash": "f52866593112dd6d67ad09c90a4a0495d6a081a0415ccdcaedb515a64b8b3aad",
+      "bodyTextPrefix": "Skip to main content Alea The die is cast. TABLE GUIDE FAQ KEYS ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Alea",
+      "hasCanvas": false,
+      "bodyTextLen": 3271,
+      "bodyTextHash": "cf4e6964eb44aca38d7a5c7dfb563b5e419b7b8fcd01f5dbb122c6e20b5dcb46",
+      "bodyTextPrefix": "Skip to main content Alea The die is cast. TABLE GUIDE FAQ KEYS ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
