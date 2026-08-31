@@ -28,7 +28,12 @@ const HINTS: Record<string, { mobile?: string; desktop: string }> = {
 };
 
 export function AppHeader() {
-  const path = useRouterState({ select: (s) => s.location.pathname });
+  const path = useRouterState({
+    select: (s) => {
+      const p = s.location.pathname;
+      return p.length > 1 && p.endsWith("/") ? p.slice(0, -1) : p;
+    },
+  });
   const hint = HINTS[path] ?? HINTS["/guide"];
 
   return (
