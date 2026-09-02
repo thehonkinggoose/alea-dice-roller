@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { SpokenLabel } from "@/components/dice/SpokenLabel";
 import { FOCUS_RING } from "@/lib/dice/a11y";
 import { cn } from "@/lib/utils";
@@ -78,7 +79,8 @@ type Props = {
   sections: DocsSection[];
 };
 
-function DocsNavLink({ to, label }: { to: string; label: string }) {
+function DocsNavLink({ to, label }: { to: "/" | "/guide" | "/faq" | "/keys" | "/tests"; label: string }) {
+  const router = useRouter({ warn: false });
   const base = import.meta.env.BASE_URL;
   const prefix = base && base !== "/" ? base.replace(/\/$/, "") : "";
   const href = `${prefix}${to}`;
@@ -89,10 +91,12 @@ function DocsNavLink({ to, label }: { to: string; label: string }) {
       href={href}
       onClick={(e) => {
         if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        if (typeof window !== "undefined") {
+        if (router) {
           e.preventDefault();
-          window.history.pushState({}, "", href);
-          window.dispatchEvent(new PopStateEvent("popstate"));
+          void router.navigate({ to });
+          if (typeof window !== "undefined") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
         }
       }}
     >
