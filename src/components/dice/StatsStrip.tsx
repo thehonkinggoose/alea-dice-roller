@@ -30,8 +30,9 @@ export function StatsStrip() {
       low = Math.min(low, roll.total);
       for (const die of roll.dice) {
         if (!die.kept) continue;
-        if (die.face === die.sides) natMax += 1;
-        if (die.face === 1) natMin += 1;
+        const isPositive = (die.sign ?? 1) > 0;
+        if (isPositive && die.face === die.sides) natMax += 1;
+        if (isPositive && die.face === 1) natMin += 1;
       }
     }
     return {

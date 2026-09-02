@@ -84,11 +84,14 @@ export function withStore<T>(fn: () => T): T {
     randomness: { ...prev.randomness },
     history: prev.history,
     last: prev.last,
+    lastBatch: prev.lastBatch,
+    rollCount: prev.rollCount,
     rolling: prev.rolling,
     error: prev.error,
     hydrated: prev.hydrated,
     poolNotice: prev.poolNotice,
     rngNotice: prev.rngNotice,
+    soundEnabled: prev.soundEnabled,
   };
   let stored: string | null = null;
   try {

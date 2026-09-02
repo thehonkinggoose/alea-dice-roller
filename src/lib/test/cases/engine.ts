@@ -6,6 +6,7 @@ import {
   expectedFace,
   faceWeights,
   formatRollLine,
+  formatRollLineClipboard,
   makeRoll,
   primarySides,
   sampleWeighted,
@@ -284,6 +285,24 @@ export const engineCases: TestDef[] = [
       t.ok(plus.includes(" + 5"), "positive modifier");
       const plain = formatRollLine(fakeRoll({ modifier: 0, dice: [fakeDie({ face: 7, sides: 20 })] }));
       t.ok(!plain.includes(" + ") && !plain.includes(" − "), "zero modifier omitted");
+
+      const clip = formatRollLineClipboard({
+        ...fakeRoll({
+          notation: "2d6-1d4-3",
+          modifier: -3,
+          total: 1,
+          dice: [
+            fakeDie({ id: "a", face: 4, sides: 6, sign: -1, exploded: true, kept: true }),
+            fakeDie({ id: "b", face: 2, sides: 6, kept: false }),
+          ],
+        }),
+      });
+      t.note("clipboard", clip);
+      t.ok(clip.includes("-4!"), "exploded negative ASCII");
+      t.ok(clip.includes("2dropped"), "dropped mark ASCII");
+      t.ok(clip.includes(" - 3"), "negative modifier ASCII");
+      t.ok(clip.includes("->"), "arrow ASCII");
+      t.ok(clip.endsWith("= 1"), "total ASCII");
     },
   },
   {

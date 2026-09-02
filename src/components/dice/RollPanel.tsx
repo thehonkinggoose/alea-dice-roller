@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { FOCUS_RING } from "@/lib/dice/a11y";
-import { chaosLoaded, formatRollLine, luckLoaded, streakLoaded } from "@/lib/dice/engine";
+import { chaosLoaded, formatRollLineClipboard, luckLoaded, streakLoaded } from "@/lib/dice/engine";
 import { onRadioGroupKeyDown } from "@/lib/dice/keyboard";
 import { describeCast, DICE_COUNT_MAX, DIE_SIDES_MAX, isCompoundExpression, MODIFIER_ABS_MAX, parseNotation } from "@/lib/dice/notation";
 import { DIE_SIDES, PRESETS, useDiceStore } from "@/lib/dice/store";
@@ -495,7 +495,7 @@ export function RollPanel() {
                 disabled={!last}
                 onClick={async () => {
                   if (!last) return;
-                  const ok = await copyText(formatRollLine(last));
+                  const ok = await copyText(formatRollLineClipboard(last));
                   toast(ok ? "Copied last result" : "Couldn’t copy");
                 }}
               >

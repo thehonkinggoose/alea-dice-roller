@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatRollLine, rollFactorFlags } from "@/lib/dice/engine";
+import { formatRollLine, formatRollLineClipboard, rollFactorFlags } from "@/lib/dice/engine";
 import { useDiceStore } from "@/lib/dice/store";
 import type { RollRecord } from "@/lib/dice/types";
 import { cn, copyText } from "@/lib/utils";
@@ -124,8 +124,8 @@ function RollActions({ roll, rolling }: { roll: RollRecord; rolling: boolean }) 
         aria-label={`Copy this roll, ${roll.notation} totaling ${roll.total}`}
         title="Copy this roll as text"
         onClick={async () => {
-          const ok = await copyText(formatRollLine(roll));
-          toast(ok ? "Copied roll" : "Couldn’t copy");
+          const ok = await copyText(formatRollLineClipboard(roll));
+          toast(ok ? "Copied roll" : "Couldn't copy");
         }}
       >
         <Copy aria-hidden="true" />
@@ -247,7 +247,7 @@ export function ResultsTable() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast("Exported roll table");
   };
 
@@ -277,12 +277,13 @@ export function ResultsTable() {
     }
     setConfirmClear(false);
     const backup = [...history];
+    const batchBackup = useDiceStore.getState().lastBatch;
     clearHistory();
     toast("Roll history cleared", {
       action: {
         label: "Undo",
         onClick: () => {
-          restoreHistory(backup);
+          restoreHistory(backup, batchBackup);
           toast("Restored roll history");
         },
       },

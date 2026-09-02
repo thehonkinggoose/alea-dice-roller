@@ -289,6 +289,24 @@ export function formatRollLine(record: RollRecord): string {
   return `${record.notation} → ${faces}${mod} = ${record.total}`;
 }
 
+/** ASCII-only variant for clipboard / paste interop (Discord bots, VTTs, spreadsheets). */
+export function formatRollLineClipboard(record: RollRecord): string {
+  const faces = record.dice
+    .map((d) => {
+      const sign = d.sign < 0 ? "-" : "";
+      const mark = d.exploded ? (d.kept ? "!" : "!dropped") : d.kept ? "" : "dropped";
+      return `${sign}${d.face}${mark}`;
+    })
+    .join(", ");
+  const mod =
+    record.modifier === 0
+      ? ""
+      : record.modifier > 0
+        ? ` + ${record.modifier}`
+        : ` - ${Math.abs(record.modifier)}`;
+  return `${record.notation} -> ${faces}${mod} = ${record.total}`;
+}
+
 export function primarySides(parsed: ParsedExpression): number {
   const first = parsed.terms.find((t) => t.kind === "dice");
   return first && first.kind === "dice" ? first.term.sides : 20;

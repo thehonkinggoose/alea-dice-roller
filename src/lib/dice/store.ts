@@ -69,7 +69,7 @@ type DiceState = PersistShape & {
   roll: (timesOverride?: number) => RollRecord[] | null;
   reroll: (record?: RollRecord) => RollRecord[] | null;
   deleteRoll: (id: string) => void;
-  restoreHistory: (records: RollRecord[]) => void;
+  restoreHistory: (records: RollRecord[], lastBatch?: RollRecord[] | null) => void;
   clearHistory: () => void;
   toggleSound: () => void;
   hydrate: () => void;
@@ -437,11 +437,12 @@ export const useDiceStore = create<DiceState>((set, get) => {
       persist(get());
     },
 
-    restoreHistory: (records: RollRecord[]) => {
+    restoreHistory: (records: RollRecord[], lastBatch?: RollRecord[] | null) => {
       const history = sanitizeHistory(records);
       set({
         history,
         last: history[0] ?? null,
+        lastBatch: lastBatch && lastBatch.length > 1 ? lastBatch : null,
       });
       persist(get());
     },
@@ -451,7 +452,7 @@ export const useDiceStore = create<DiceState>((set, get) => {
         clearTimeout(rollAnimTimer);
         rollAnimTimer = null;
       }
-      set({ history: [], last: null, lastBatch: null, rolling: false });
+      set({ history: [], last: null, lastBatch: null, rolling: false, rollCount: 0 });
       persist(get());
     },
 
