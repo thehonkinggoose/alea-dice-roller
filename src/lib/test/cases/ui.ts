@@ -52,6 +52,18 @@ export const uiCases: TestDef[] = [
       t.ok(d20.includes("clip-d20"), "d20 clip");
       t.ok(d6.includes("grid-cols-3"), "d6 pips grid");
       t.ok(!d6.includes(">5<"), "d6 is not a numeral");
+
+      // Verify non-d6 polyhedra (d20, d12) never render pips for faces 1-6
+      for (let f = 1; f <= 6; f++) {
+        const d20Html = html(createElement(DieFace, { die: fakeDie({ face: f, sides: 20 }) }));
+        t.ok(!d20Html.includes("grid-cols-3"), `d20 face ${f} must not render pips`);
+        t.ok(d20Html.includes(`>${f}<`), `d20 face ${f} must render numeral`);
+
+        const d12Html = html(createElement(DieFace, { die: fakeDie({ face: f, sides: 12 }) }));
+        t.ok(!d12Html.includes("grid-cols-3"), `d12 face ${f} must not render pips`);
+        t.ok(d12Html.includes(`>${f}<`), `d12 face ${f} must render numeral`);
+      }
+
       t.ok(d20.includes("die-tumble"), "rolling");
       t.ok(d20.includes("ring-max"), "nat max ring");
       t.ok(dropped.includes("opacity-35"), "dropped fade");
