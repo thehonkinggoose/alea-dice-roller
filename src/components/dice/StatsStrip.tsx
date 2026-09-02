@@ -74,12 +74,20 @@ export function StatsStrip() {
       </h2>
       <dl className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 lg:grid-cols-7">
         {cells.map((cell) => (
-          <div key={cell.label} className="min-w-0 bg-card px-3 py-3 sm:px-4" title={`${cell.label}: ${cell.hint}`}>
+          <div
+            key={cell.label}
+            className="min-w-0 bg-card px-3 py-3 sm:px-4 first:col-span-2 sm:first:col-span-2 lg:first:col-span-1"
+            title={`${cell.label}: ${cell.hint}`}
+          >
             <dt className="text-xs text-subtle">
               <SpokenLabel>{cell.label}</SpokenLabel>
             </dt>
-            <dd className="mt-1 font-mono text-lg tabular-nums text-foreground">{cell.value}</dd>
-            <p className="mt-1 text-xs leading-snug text-subtle">{cell.hint}</p>
+            <dd className="mt-1 font-mono text-lg tabular-nums text-foreground">
+              {cell.value}
+              <span className="mt-1 block font-sans text-xs font-normal leading-snug text-subtle">
+                {cell.hint}
+              </span>
+            </dd>
           </div>
         ))}
       </dl>

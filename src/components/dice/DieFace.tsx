@@ -53,7 +53,13 @@ export function DieFace({ die, rolling = false, delay = 0, size = "md" }: Props)
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="relative">
+      <div
+        className={cn(
+          "relative",
+          isMax && die.kept && "[filter:drop-shadow(0_0_4px_var(--color-max))]",
+          isMin && die.kept && die.sides >= 20 && "[filter:drop-shadow(0_0_4px_var(--color-crit))]",
+        )}
+      >
         {sign < 0 ? (
           <span
             className="pointer-events-none absolute -left-1 -top-1 z-10 rounded-sm bg-card px-0.5 font-mono text-[0.65rem] leading-none text-crit"

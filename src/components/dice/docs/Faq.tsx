@@ -152,6 +152,17 @@ export function Faq() {
           ),
         },
         {
+          id: "voiceover-batch",
+          title: "How do batch rolls announce to VoiceOver and JAWS?",
+          children: (
+            <>
+              <p>
+                When Repeat is greater than 1 (such as 6 rolls for ability scores), the live region announces the full batch: the count, all individual totals, and the last roll’s details and versus-expected deviation. Critical hits (Natural 20) and fumbles (Natural 1) are also spoken immediately.
+              </p>
+            </>
+          ),
+        },
+        {
           id: "expected",
           title: "What does “versus expected” mean?",
           children: (

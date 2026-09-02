@@ -1,6 +1,7 @@
-import { Dices } from "lucide-react";
+import { Dices, Volume2, VolumeX } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { FOCUS_RING } from "@/lib/dice/a11y";
+import { useDiceStore } from "@/lib/dice/store";
 import { cn } from "@/lib/utils";
 
 const linkBase = cn(
@@ -28,6 +29,8 @@ const HINTS: Record<string, { mobile?: string; desktop: string }> = {
 };
 
 export function AppHeader() {
+  const soundEnabled = useDiceStore((s) => s.soundEnabled);
+  const toggleSound = useDiceStore((s) => s.toggleSound);
   const path = useRouterState({
     select: (s) => {
       const p = s.location.pathname;
@@ -72,11 +75,31 @@ export function AppHeader() {
                 </li>
               );
             })}
+            <li className="ml-0.5">
+              <button
+                type="button"
+                aria-label={soundEnabled ? "Mute dice sounds" : "Enable dice sounds"}
+                title={soundEnabled ? "Dice sound on (click to mute)" : "Dice sound off (click to enable)"}
+                aria-pressed={soundEnabled}
+                onClick={toggleSound}
+                className={cn(
+                  linkBase,
+                  soundEnabled ? "text-primary hover:text-primary/80" : "text-subtle hover:text-foreground",
+                )}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="size-4" aria-hidden="true" />
+                ) : (
+                  <VolumeX className="size-4" aria-hidden="true" />
+                )}
+                <span className="sr-only">{soundEnabled ? "Sound enabled" : "Sound muted"}</span>
+              </button>
+            </li>
           </ul>
         </nav>
         {hint.mobile ? (
           <>
-            <p className="max-w-48 text-right text-xs leading-relaxed text-subtle sm:hidden">{hint.mobile}</p>
+            <p className="max-w-none text-left text-xs leading-relaxed text-subtle sm:hidden">{hint.mobile}</p>
             <p className="hidden max-w-xs text-right text-xs leading-relaxed text-subtle sm:block">{hint.desktop}</p>
           </>
         ) : (

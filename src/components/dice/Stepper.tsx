@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent } from "react";
+import { useId, useRef, type KeyboardEvent } from "react";
 import { Minus, Plus } from "lucide-react";
 import { FieldMeta } from "@/components/dice/FieldMeta";
 import { Button } from "@/components/ui/button";
@@ -26,20 +26,39 @@ export function Stepper({ label, hint, value, min, max, onStep, signed, disabled
   const locked = Boolean(disabled && display === "—");
   const spoken = locked ? `${label} locked` : `${label} ${shown}`;
 
+  const minusRef = useRef<HTMLButtonElement>(null);
+  const plusRef = useRef<HTMLButtonElement>(null);
+
+  function step(delta: number) {
+    if (disabled) return;
+    if (delta < 0 && value + delta <= min && document.activeElement === minusRef.current) {
+      plusRef.current?.focus();
+    } else if (delta > 0 && value + delta >= max && document.activeElement === plusRef.current) {
+      minusRef.current?.focus();
+    }
+    onStep(delta);
+  }
+
   function handleKey(event: KeyboardEvent<HTMLButtonElement>) {
     if (disabled) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
       event.preventDefault();
-      if (value > min) onStep(-1);
+      if (value > min) step(-1);
     } else if (event.key === "ArrowRight" || event.key === "ArrowUp") {
       event.preventDefault();
-      if (value < max) onStep(1);
+      if (value < max) step(1);
     } else if (event.key === "Home") {
       event.preventDefault();
-      if (value !== min) onStep(min - value);
+      if (value !== min) {
+        if (document.activeElement === minusRef.current) plusRef.current?.focus();
+        onStep(min - value);
+      }
     } else if (event.key === "End") {
       event.preventDefault();
-      if (value !== max) onStep(max - value);
+      if (value !== max) {
+        if (document.activeElement === plusRef.current) minusRef.current?.focus();
+        onStep(max - value);
+      }
     }
   }
 
@@ -52,16 +71,23 @@ export function Stepper({ label, hint, value, min, max, onStep, signed, disabled
       data-testid={`stepper-${slug}`}
     >
       <FieldMeta label={label} hint={hint} labelId={labelId} hintId={hintId} />
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex min-w-0 items-center justify-between gap-1">
         <Button
+          ref={minusRef}
           type="button"
           variant="secondary"
           size="icon-sm"
           className="shrink-0"
-          aria-label={locked ? `Decrease ${label}, locked` : `Decrease ${label}, currently ${shown}`}
+          aria-label={
+            locked
+              ? `Decrease ${label}, locked`
+              : disabled
+                ? `Decrease ${label}, disabled`
+                : `Decrease ${label}, currently ${shown}`
+          }
           title={`Decrease ${label}`}
           disabled={disabled || value <= min}
-          onClick={() => onStep(-1)}
+          onClick={() => step(-1)}
           onKeyDown={handleKey}
         >
           <Minus aria-hidden="true" />
@@ -73,17 +99,25 @@ export function Stepper({ label, hint, value, min, max, onStep, signed, disabled
           aria-atomic="true"
           aria-label={spoken}
         >
-          {shown}
+          <span className="sr-only">{spoken}</span>
+          <span aria-hidden="true">{shown}</span>
         </span>
         <Button
+          ref={plusRef}
           type="button"
           variant="secondary"
           size="icon-sm"
           className="shrink-0"
-          aria-label={locked ? `Increase ${label}, locked` : `Increase ${label}, currently ${shown}`}
+          aria-label={
+            locked
+              ? `Increase ${label}, locked`
+              : disabled
+                ? `Increase ${label}, disabled`
+                : `Increase ${label}, currently ${shown}`
+          }
           title={`Increase ${label}`}
           disabled={disabled || value >= max}
-          onClick={() => onStep(1)}
+          onClick={() => step(1)}
           onKeyDown={handleKey}
         >
           <Plus aria-hidden="true" />

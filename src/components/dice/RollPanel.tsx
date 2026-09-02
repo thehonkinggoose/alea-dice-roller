@@ -1,4 +1,4 @@
-import { Copy, Dices, RotateCcw } from "lucide-react";
+import { Copy, Dices, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { FieldMeta } from "@/components/dice/FieldMeta";
 import { SpokenLabel } from "@/components/dice/SpokenLabel";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { FOCUS_RING } from "@/lib/dice/a11y";
-import { formatRollLine } from "@/lib/dice/engine";
+import { chaosLoaded, formatRollLine, luckLoaded, streakLoaded } from "@/lib/dice/engine";
 import { onRadioGroupKeyDown } from "@/lib/dice/keyboard";
 import { describeCast, DICE_COUNT_MAX, DIE_SIDES_MAX, isCompoundExpression, MODIFIER_ABS_MAX, parseNotation } from "@/lib/dice/notation";
 import { DIE_SIDES, PRESETS, useDiceStore } from "@/lib/dice/store";
@@ -65,6 +65,12 @@ export function RollPanel() {
   const poolLocked = compound || !live.valid;
   const keepNDisabled = poolLocked || pool.keepMode === "none" || pool.count < 2;
   const chipSelected = DIE_SIDES.includes(pool.sides as (typeof DIE_SIDES)[number]);
+  const randomness = useDiceStore((s) => s.randomness);
+  const isLoaded =
+    luckLoaded(randomness.luck) ||
+    chaosLoaded(randomness.chaos) ||
+    streakLoaded(randomness.streak) ||
+    randomness.seedLocked;
 
   let explodingHint: string;
   if (poolLocked && !live.valid) {
@@ -90,13 +96,23 @@ export function RollPanel() {
     .filter(Boolean)
     .join(" ");
 
-
   return (
     <Card className="rounded-xl" role="region" aria-labelledby="pool-heading">
       <CardHeader className="border-b border-border bg-card pb-3 lg:sticky lg:top-0 lg:z-10">
-        <CardTitle id="pool-heading" className="text-sm text-muted-foreground">
-          <SpokenLabel>Pool</SpokenLabel>
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle id="pool-heading" className="text-sm text-muted-foreground">
+            <SpokenLabel>Pool</SpokenLabel>
+          </CardTitle>
+          {isLoaded ? (
+            <span
+              role="status"
+              className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[0.7rem] font-medium text-primary"
+              title="Luck, chaos, streak, or seed bias is active"
+            >
+              Loaded table
+            </span>
+          ) : null}
+        </div>
         <CardDescription>
           The dice you will cast. A pool is one expression, like 2d6+3.
         </CardDescription>
@@ -141,19 +157,32 @@ export function RollPanel() {
               label="Notation"
               hint="Written form of the pool. 2d6+3 is two six-sided dice plus 3. kh keeps high; kl keeps low."
             />
-            <Input
-              id="notation"
-              value={notation}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoComplete="off"
-              placeholder="2d6+3 or 4d6kh3"
-              className="font-mono"
-              onChange={(e) => setNotation(e.target.value)}
-              aria-invalid={!live.valid || Boolean(error)}
-              aria-describedby={notationDescribedBy}
-              aria-errormessage={!live.valid ? "pool-live-detail" : error ? "notation-error" : undefined}
-            />
+            <div className="relative">
+              <Input
+                id="notation"
+                value={notation}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoComplete="off"
+                placeholder="2d6+3 or 4d6kh3"
+                className={cn("font-mono", notation ? "pr-8" : "")}
+                onChange={(e) => setNotation(e.target.value)}
+                aria-invalid={!live.valid || Boolean(error)}
+                aria-describedby={notationDescribedBy}
+                aria-errormessage={!live.valid ? "pool-live-detail" : error ? "notation-error" : undefined}
+              />
+              {notation ? (
+                <button
+                  type="button"
+                  aria-label="Clear notation"
+                  title="Clear notation"
+                  onClick={() => setNotation("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subtle transition-colors hover:text-foreground"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
             {error ? (
               <p id="notation-error" role="alert" className="text-xs text-crit">
                 {error}
@@ -280,6 +309,42 @@ export function RollPanel() {
             />
           </div>
 
+          {!poolLocked ? (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[0.7rem] uppercase tracking-wider text-subtle">
+                <SpokenLabel>Quick modifier</SpokenLabel>:
+              </span>
+              {[-1, 1, 2, 5].map((delta) => (
+                <button
+                  key={delta}
+                  type="button"
+                  aria-label={`${delta > 0 ? "Add" : "Subtract"} ${Math.abs(delta)} to modifier`}
+                  title={`${delta > 0 ? "Add" : "Subtract"} ${Math.abs(delta)} to modifier`}
+                  onClick={() => patchPool({ modifier: pool.modifier + delta })}
+                  className={cn(
+                    FOCUS_RING,
+                    "h-8 rounded border border-border bg-elevated px-2 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground",
+                  )}
+                >
+                  {delta > 0 ? `+${delta}` : delta}
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-label="Reset modifier to zero"
+                title="Reset modifier to zero"
+                disabled={pool.modifier === 0}
+                onClick={() => patchPool({ modifier: 0 })}
+                className={cn(
+                  FOCUS_RING,
+                  "h-8 rounded border border-border bg-elevated px-2 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-40",
+                )}
+              >
+                Zero
+              </button>
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-3">
             <FieldMeta
               labelId="keep-label"
@@ -328,22 +393,26 @@ export function RollPanel() {
                   );
                 })}
               </div>
-              <Stepper
-                label="How many"
-                hint="How many dice still count toward the total when High or Low is on."
-                value={pool.keepN}
-                min={1}
-                max={Math.max(1, pool.count - 1)}
-                disabled={keepNDisabled}
-                display={poolLocked ? "—" : undefined}
-                onStep={(d) => patchPool({ keepN: useDiceStore.getState().pool.keepN + d })}
-              />
+              <div className="w-full max-w-48 sm:w-auto sm:max-w-none">
+                <Stepper
+                  label="How many"
+                  hint="How many dice still count toward the total when High or Low is on."
+                  value={pool.keepN}
+                  min={1}
+                  max={Math.max(1, pool.count - 1)}
+                  disabled={keepNDisabled}
+                  display={poolLocked ? "—" : undefined}
+                  onStep={(d) => patchPool({ keepN: useDiceStore.getState().pool.keepN + d })}
+                />
+              </div>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
             <Switch
               id="exploding"
+              aria-label="Exploding dice"
+              aria-labelledby="exploding-label"
               className="mt-0.5"
               checked={poolLocked ? anyExploding : pool.exploding}
               disabled={poolLocked}
@@ -353,6 +422,7 @@ export function RollPanel() {
             />
             <FieldMeta
               htmlFor="exploding"
+              labelId="exploding-label"
               hintId="exploding-hint"
               label="Exploding"
               hint={explodingHint}

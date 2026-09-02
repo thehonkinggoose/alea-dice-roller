@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { SkipLink } from "@/components/ui/skip-link";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { describeDie, describeDieTitle } from "@/lib/dice/a11y";
+import { describeDie, describeDieTitle, describeRollAnnouncement } from "@/lib/dice/a11y";
 import { isTypingTarget, onRadioGroupKeyDown } from "@/lib/dice/keyboard";
 import { cn, copyText } from "@/lib/utils";
 import { fakeDie, fakeRoll, withStore } from "@/lib/test/helpers";
@@ -228,7 +228,7 @@ export const uiCases: TestDef[] = [
     why: "Conflicting utility classes would leave stale padding on every button. Clipboard denials must not throw into the UI.",
     run: async (t) => {
       t.eq(cn("px-2", "px-4"), "px-4", "tailwind merge");
-      t.ok(cn("a", false && "b", undefined).includes("a"), "falsy skipped");
+      t.ok(cn("a", Boolean(false) && "b", undefined).includes("a"), "falsy skipped");
       t.eq(isTypingTarget(null), false, "null is not a typing target");
       const nav = globalThis.navigator as Navigator | undefined;
       if (!nav) {
@@ -295,6 +295,13 @@ export const uiCases: TestDef[] = [
       const tab = document.createElement("button");
       tab.setAttribute("role", "tab");
       t.eq(isTypingTarget(tab), true, "tab");
+      const region = document.createElement("div");
+      region.setAttribute("role", "region");
+      t.eq(isTypingTarget(region), true, "region");
+      const tbl = document.createElement("table");
+      t.eq(isTypingTarget(tbl), true, "table");
+      const summary = document.createElement("summary");
+      t.eq(isTypingTarget(summary), true, "summary");
       t.eq(isTypingTarget(document.body), false, "body is a cast target");
       t.ok(isBrowser(), "running in a document");
     },
@@ -832,6 +839,137 @@ export const uiCases: TestDef[] = [
       t.ok(keys.includes("<table") && keys.includes("<caption"), "keystroke tables are real tables");
       t.ok(keys.includes("scope=\"col\""), "column headers");
       t.ok(keys.includes("role=switch") || keys.includes("switches, not checkboxes"), "exploding is a switch");
+      t.ok(keys.includes("VoiceOver on iOS"), "keys covers voiceover ios");
+    },
+  },
+  {
+    id: "ui-voiceover-and-jaws-fidelity",
+    suite: "Interface",
+    name: "VoiceOver and JAWS screen reader accessibility fidelity",
+    description: "Switches have explicit accessible names for WebKit/VoiceOver iOS. Stepper provides decoupled sr-only announcements. Live roll announcements speak natural 20 crits, natural 1 fumbles, and full repeat batch totals. StatsStrip uses valid semantic dl tags.",
+    why: "VoiceOver on iOS fails to name button[role=switch] from external labels without aria-label/aria-labelledby. Screen reader live regions need batch totals and crits spoken directly.",
+    run: (t) => {
+      // 1. Roll announcements (single, crit, fumble, batch)
+      const normalRoll = fakeRoll({ notation: "1d20", total: 14, expected: 10.5, dice: [fakeDie({ face: 14, sides: 20 })] });
+      const normalAnnouncement = describeRollAnnouncement(normalRoll, 1);
+      t.ok(normalAnnouncement.includes("Roll 1: Total 14 from 1d20"), "normal roll announcement");
+      t.ok(normalAnnouncement.includes("plus 3.5 versus expected"), "normal delta");
+
+      const critRoll = fakeRoll({ notation: "1d20", total: 20, expected: 10.5, dice: [fakeDie({ face: 20, sides: 20, kept: true })] });
+      const critAnnouncement = describeRollAnnouncement(critRoll, 2);
+      t.ok(critAnnouncement.includes("Natural 20!"), "crit roll announces Natural 20!");
+
+      const fumbleRoll = fakeRoll({ notation: "1d20", total: 1, expected: 10.5, dice: [fakeDie({ face: 1, sides: 20, kept: true })] });
+      const fumbleAnnouncement = describeRollAnnouncement(fumbleRoll, 3);
+      t.ok(fumbleAnnouncement.includes("Natural 1!"), "fumble roll announces Natural 1!");
+
+      const batchRolls = [
+        fakeRoll({ total: 14 }),
+        fakeRoll({ total: 11 }),
+        fakeRoll({ total: 16 }),
+        fakeRoll({ total: 18, notation: "4d6kh3", expected: 12.2 }),
+      ];
+      const batchAnnouncement = describeRollAnnouncement(batchRolls[3], 4, batchRolls);
+      t.ok(batchAnnouncement.includes("Batch of 4 rolls: totals 14, 11, 16, 18"), "batch announcement lists all totals");
+      t.ok(batchAnnouncement.includes("Last roll: Total 18 from 4d6kh3"), "batch mentions last roll");
+
+      // 2. Switches in RollPanel and RandomnessLab have accessible names
+      withStore(() => {
+        const rollPanel = html(createElement(RollPanel));
+        t.ok(rollPanel.includes('aria-label="Exploding dice"'), "exploding switch has explicit aria-label");
+        t.ok(rollPanel.includes('aria-labelledby="exploding-label"'), "exploding switch has aria-labelledby");
+
+        const lab = html(createElement(RandomnessLab));
+        t.ok(lab.includes('aria-label="Lock seed"'), "seed-lock switch has explicit aria-label");
+        t.ok(lab.includes('aria-labelledby="seed-lock-label"'), "seed-lock switch has aria-labelledby");
+
+        // 3. StatsStrip dl semantics
+        const stats = html(createElement(StatsStrip));
+        t.ok(stats.includes("<dt"), "stats has dt");
+        t.ok(stats.includes("<dd"), "stats has dd");
+
+        // 4. Stepper decoupled sr-only structure
+        const stepper = html(createElement(Stepper, { label: "Dice", value: 3, min: 1, max: 10, onStep: () => undefined }));
+        t.ok(stepper.includes('class="sr-only">Dice 3</span>'), "stepper has sr-only text for iOS VoiceOver");
+      });
+    },
+  },
+  {
+    id: "ui-qol-features",
+    suite: "Interface",
+    name: "Quality of Life features: load pool, delete roll, history search, bias presets, and audio",
+    description: "ResultsTable provides load-into-pool and delete-roll actions. RandomnessLab offers thematic bias presets. ResultsTable supports search/filter and markdown copy. Store tracks soundEnabled.",
+    why: "Tabletop sessions need fluid pool swapping, safe roll deletion, and quick bias presets.",
+    run: (t) => {
+      withStore(() => {
+        const store = useDiceStore.getState();
+
+        // 1. loadPoolFromNotation
+        const loaded = store.loadPoolFromNotation("3d8+4");
+        t.eq(loaded, true, "loadPoolFromNotation succeeds");
+        t.eq(useDiceStore.getState().notation, "3d8+4", "notation updated to 3d8+4");
+        t.eq(useDiceStore.getState().pool.count, 3, "pool count updated");
+        t.eq(useDiceStore.getState().pool.sides, 8, "pool sides updated");
+        t.eq(useDiceStore.getState().pool.modifier, 4, "pool modifier updated");
+
+        // 2. deleteRoll and restoreHistory
+        const r1 = fakeRoll({ id: "roll-1", notation: "1d20", total: 15 });
+        const r2 = fakeRoll({ id: "roll-2", notation: "2d6", total: 8 });
+        store.restoreHistory([r1, r2]);
+        t.eq(useDiceStore.getState().history.length, 2, "2 rolls restored");
+        t.eq(useDiceStore.getState().last?.id, "roll-1", "last roll is r1");
+
+        store.deleteRoll("roll-1");
+        t.eq(useDiceStore.getState().history.length, 1, "1 roll remains after delete");
+        t.eq(useDiceStore.getState().last?.id, "roll-2", "last roll updated to r2");
+
+        // 3. sound toggle
+        t.eq(useDiceStore.getState().soundEnabled, false, "sound initially false");
+        store.toggleSound();
+        t.eq(useDiceStore.getState().soundEnabled, true, "sound toggled true");
+        store.toggleSound();
+        t.eq(useDiceStore.getState().soundEnabled, false, "sound toggled back to false");
+
+        // 4. UI rendering of QoL elements (SSR-safe)
+        const panel = html(createElement(RollPanel));
+        t.ok(panel.includes("Quick modifier"), "quick modifier chips rendered");
+        t.ok(panel.includes("Clear notation"), "clear notation button present");
+
+        const lab = html(createElement(RandomnessLab));
+        t.ok(lab.includes("Heroic") && lab.includes("Gritty") && lab.includes("Wild"), "bias presets rendered");
+
+        const table = html(createElement(ResultsTable));
+        t.ok(table.includes("Markdown") && table.includes("CSV"), "markdown and csv export buttons in header");
+      });
+    },
+  },
+  {
+    id: "ui-qol-history-browser",
+    suite: "Interface",
+    name: "ResultsTable interactive history QoL: load into pool, filter, and delete",
+    description: "Mounts ResultsTable on a document with history to verify search input, load-into-pool, and delete-roll actions.",
+    why: "Tabletop sessions need fluid pool loading from history, searching past rolls, and removing unwanted rolls.",
+    env: "browser",
+    run: (t) => {
+      withStore(() => {
+        const r1 = fakeRoll({ id: "h1", notation: "2d6+3", total: 11 });
+        useDiceStore.setState({ history: [r1], last: r1 });
+        const host = document.createElement("div");
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        try {
+          flushSync(() => {
+            root.render(createElement(ResultsTable));
+          });
+          const markup = host.innerHTML;
+          t.ok(markup.includes("Filter roll history"), "search input rendered with history");
+          t.ok(markup.includes("Load 2d6+3 into active pool"), "load pool action rendered");
+          t.ok(markup.includes("Delete roll 2d6+3"), "delete roll action rendered");
+        } finally {
+          root.unmount();
+          host.remove();
+        }
+      });
     },
   },
 ];

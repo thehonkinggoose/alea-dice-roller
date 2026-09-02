@@ -1,10 +1,12 @@
-import { Copy, RotateCcw, Trash2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Copy, CornerDownLeft, FileText, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { DieFace } from "@/components/dice/DieFace";
 import { SpokenLabel } from "@/components/dice/SpokenLabel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatRollLine, rollFactorFlags } from "@/lib/dice/engine";
 import { useDiceStore } from "@/lib/dice/store";
 import type { RollRecord } from "@/lib/dice/types";
@@ -91,12 +93,30 @@ function FactorList({ roll }: { roll: RollRecord }) {
 
 function RollActions({ roll, rolling }: { roll: RollRecord; rolling: boolean }) {
   const reroll = useDiceStore((s) => s.reroll);
+  const deleteRoll = useDiceStore((s) => s.deleteRoll);
+  const loadPoolFromNotation = useDiceStore((s) => s.loadPoolFromNotation);
+
   return (
-    <div className="flex justify-end gap-0.5">
+    <div className="flex justify-end gap-1">
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
+        className="h-11 min-w-11 sm:h-9 sm:min-w-9"
+        aria-label={`Load ${roll.notation} into active pool`}
+        title="Load this formula into the active pool"
+        onClick={() => {
+          loadPoolFromNotation(roll.notation);
+          toast(`Loaded ${roll.notation} into active pool`);
+        }}
+      >
+        <CornerDownLeft aria-hidden="true" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="h-11 min-w-11 sm:h-9 sm:min-w-9"
         aria-label={`Copy this roll, ${roll.notation} totaling ${roll.total}`}
         title="Copy this roll as text"
         onClick={async () => {
@@ -110,12 +130,27 @@ function RollActions({ roll, rolling }: { roll: RollRecord; rolling: boolean }) 
         type="button"
         variant="ghost"
         size="icon-sm"
+        className="h-11 min-w-11 sm:h-9 sm:min-w-9"
         aria-label={`Reroll this expression, ${roll.notation}, with current factors`}
         title="Cast this expression once more with the current luck, chaos, streak, and seed"
         aria-busy={rolling}
         onClick={() => reroll(roll)}
       >
         <RotateCcw aria-hidden="true" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="h-11 min-w-11 text-muted-foreground hover:text-crit sm:h-9 sm:min-w-9"
+        aria-label={`Delete roll ${roll.notation} totaling ${roll.total} from history`}
+        title="Remove this roll from history"
+        onClick={() => {
+          deleteRoll(roll.id);
+          toast("Removed roll from history");
+        }}
+      >
+        <Trash2 aria-hidden="true" />
       </Button>
     </div>
   );
@@ -131,11 +166,43 @@ const COLUMNS = [
   { key: "factors", label: "Factors", hint: "Luck, chaos, streak, or seed in effect" },
 ] as const;
 
+type FilterType = "all" | "crits" | "fumbles" | "loaded";
+
 export function ResultsTable() {
   const history = useDiceStore((s) => s.history);
   const lastId = useDiceStore((s) => s.last?.id);
   const rolling = useDiceStore((s) => s.rolling);
   const clearHistory = useDiceStore((s) => s.clearHistory);
+  const restoreHistory = useDiceStore((s) => s.restoreHistory);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const filteredHistory = useMemo(() => {
+    return history.filter((roll) => {
+      if (activeFilter === "crits") {
+        const hasCrit = roll.dice.some((d) => d.kept && d.face === d.sides);
+        if (!hasCrit) return false;
+      } else if (activeFilter === "fumbles") {
+        const hasFumble = roll.dice.some((d) => d.kept && d.face === 1);
+        if (!hasFumble) return false;
+      } else if (activeFilter === "loaded") {
+        const flags = rollFactorFlags(roll);
+        if (!flags.luck && !flags.chaos && !flags.streak && !flags.seed) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const notationMatch = roll.notation.toLowerCase().includes(q);
+        const totalMatch = String(roll.total) === q;
+        const timeMatch = timeLabel(roll.at).toLowerCase().includes(q);
+        if (!notationMatch && !totalMatch && !timeMatch) return false;
+      }
+
+      return true;
+    });
+  }, [history, activeFilter, searchQuery]);
 
   const exportCsv = () => {
     const header = "time,notation,faces,kept,dropped,modifier,total,expected,luck,chaos,streak,seed";
@@ -162,16 +229,61 @@ export function ResultsTable() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "alea-rolls.csv";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(url);
     toast("Exported roll table");
+  };
+
+  const copyMarkdown = async () => {
+    const lines = [
+      "| Time | Notation | Each Die | Mod | Total | vs Exp | Factors |",
+      "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+      ...history.map((r) => {
+        const rawDelta = r.total - r.expected;
+        const delta = Math.abs(rawDelta) < 0.05 ? 0 : rawDelta;
+        const deltaStr = (delta >= 0 ? "+" : "") + delta.toFixed(1);
+        const modStr = r.modifier === 0 ? "—" : r.modifier > 0 ? `+${r.modifier}` : String(r.modifier);
+        const chips = factorChips(r).map((c) => c.text).join(" ") || "fair";
+        return `| ${timeLabel(r.at)} | ${r.notation} | ${signedFaces(r, null)} | ${modStr} | **${r.total}** | ${deltaStr} | ${chips} |`;
+      }),
+    ];
+    const ok = await copyText(lines.join("\n"));
+    toast(ok ? "Copied roll history as Markdown" : "Couldn’t copy");
+  };
+
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  const handleClearClick = () => {
+    if (history.length > 2 && !confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    setConfirmClear(false);
+    const backup = [...history];
+    clearHistory();
+    toast("Roll history cleared", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          restoreHistory(backup);
+          toast("Restored roll history");
+        },
+      },
+    });
+    resultsHeadingRef.current?.focus();
+  };
+
+  const cancelClear = () => {
+    setConfirmClear(false);
   };
 
   return (
     <Card className="rounded-xl" role="region" aria-labelledby="results-heading">
       <CardHeader className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <CardTitle id="results-heading" className="text-sm text-muted-foreground">
+          <CardTitle id="results-heading" ref={resultsHeadingRef} tabIndex={-1} className="text-sm text-muted-foreground outline-none">
             <SpokenLabel>Results</SpokenLabel>
           </CardTitle>
           <CardDescription className="mt-1">
@@ -180,7 +292,7 @@ export function ResultsTable() {
               : `${history.length} roll${history.length === 1 ? "" : "s"} this session`}
           </CardDescription>
         </div>
-        <div className="flex shrink-0 gap-1 self-start">
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 self-start">
           <Button
             type="button"
             variant="ghost"
@@ -190,36 +302,150 @@ export function ResultsTable() {
             aria-label="Export roll history as CSV"
             onClick={exportCsv}
           >
-            Export
+            CSV
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             disabled={history.length === 0}
-            title="Wipe this session’s rolls from this device"
-            aria-label="Clear roll history from this device"
-            onClick={clearHistory}
+            title="Copy roll history formatted as a Markdown table"
+            aria-label="Copy roll history as Markdown"
+            onClick={copyMarkdown}
           >
-            <Trash2 aria-hidden="true" />
-            Clear
+            <FileText aria-hidden="true" />
+            Markdown
           </Button>
+          {confirmClear ? (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                aria-label="Confirm clear all roll history"
+                onClick={handleClearClick}
+              >
+                Clear all
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-label="Cancel clear"
+                onClick={cancelClear}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={history.length === 0}
+              title="Wipe this session’s rolls from this device"
+              aria-label="Clear roll history from this device"
+              onClick={handleClearClick}
+            >
+              <Trash2 aria-hidden="true" />
+              Clear
+            </Button>
+          )}
         </div>
       </CardHeader>
+
+      {history.length > 0 ? (
+        <div className="border-b border-border/80 px-4 py-2.5 sm:px-6">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-subtle" aria-hidden="true" />
+              <Input
+                value={searchQuery}
+                placeholder="Filter by formula, total, or time..."
+                className="h-8 pl-8 pr-7 text-xs"
+                aria-label="Filter roll history"
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-subtle hover:text-foreground"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X className="size-3.5" aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1">
+              {(
+                [
+                  { id: "all", label: "All" },
+                  { id: "crits", label: "Crits / Max" },
+                  { id: "fumbles", label: "Fumbles / 1" },
+                  { id: "loaded", label: "Loaded" },
+                ] as const
+              ).map((f) => {
+                const active = activeFilter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setActiveFilter(f.id)}
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-elevated text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+              <span className="ml-1 text-xs text-subtle" role="status" aria-live="polite">
+                {filteredHistory.length === history.length
+                  ? `${history.length} rolls`
+                  : `${filteredHistory.length} of ${history.length}`}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <CardContent className="px-0 pb-2">
         {history.length === 0 ? (
           <div className="px-5 pb-4 text-sm text-subtle" role="status">
             Roll to fill the table. Dropped dice stay visible, faded as discarded.
+          </div>
+        ) : filteredHistory.length === 0 ? (
+          <div className="px-5 py-6 text-center text-sm text-subtle" role="status">
+            <p>No rolls match the current filter.</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                setSearchQuery("");
+                setActiveFilter("all");
+              }}
+            >
+              Reset filter
+            </Button>
           </div>
         ) : (
           <>
             <ul
               className="md:hidden"
               data-testid="roll-cards"
-              aria-label={`Roll history. ${history.length} roll${history.length === 1 ? "" : "s"} this session.`}
+              aria-label={`Roll history. ${filteredHistory.length} roll${filteredHistory.length === 1 ? "" : "s"} shown.`}
             >
-              {history.map((roll) => {
-                const delta = roll.total - roll.expected;
+              {filteredHistory.map((roll) => {
+                const rawDelta = roll.total - roll.expected;
+                const delta = Math.abs(rawDelta) < 0.05 ? 0 : rawDelta;
                 return (
                   <li
                     key={roll.id}
@@ -304,7 +530,7 @@ export function ResultsTable() {
             >
               <table className="data-table">
                 <caption className="sr-only">
-                  Roll history. {history.length} roll{history.length === 1 ? "" : "s"} this session.
+                  Roll history. {filteredHistory.length} roll${filteredHistory.length === 1 ? "" : "s"} shown.
                 </caption>
                 <thead>
                   <tr className="border-y border-border text-xs text-subtle">
@@ -324,14 +550,15 @@ export function ResultsTable() {
                     <th scope="col" className="px-5 py-2 font-medium">
                       <SpokenLabel>Actions</SpokenLabel>
                       <span className="mt-0.5 block font-normal normal-case tracking-normal text-subtle">
-                        Copy or reroll this row
+                        Load, copy, reroll, or delete
                       </span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {history.map((roll) => {
-                    const delta = roll.total - roll.expected;
+                  {filteredHistory.map((roll) => {
+                    const rawDelta = roll.total - roll.expected;
+                    const delta = Math.abs(rawDelta) < 0.05 ? 0 : rawDelta;
                     return (
                       <tr
                         key={roll.id}

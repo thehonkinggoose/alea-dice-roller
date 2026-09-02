@@ -109,6 +109,13 @@ function FactorRow({
   );
 }
 
+const BIAS_PRESETS = [
+  { id: "fair", label: "Fair", hint: "Uniform mathematical odds", luck: 0, chaos: 0.5, streak: 0 },
+  { id: "heroic", label: "Heroic", hint: "Tilt high, slightly wild with positive momentum", luck: 0.3, chaos: 0.6, streak: 0.25 },
+  { id: "gritty", label: "Gritty", hint: "Tilt low, tighter spread with cooling streaks", luck: -0.2, chaos: 0.4, streak: -0.2 },
+  { id: "wild", label: "Wild", hint: "Extreme odds — crits and fumbles abound", luck: 0, chaos: 0.9, streak: 0 },
+] as const;
+
 export function RandomnessLab() {
   const randomness = useDiceStore((s) => s.randomness);
   const history = useDiceStore((s) => s.history);
@@ -157,17 +164,23 @@ export function RandomnessLab() {
   const chaosDisplay = `${Math.round(randomness.chaos * 100)}`;
   const streakDisplay = `${randomness.streak > 0 ? "+" : ""}${Math.round(randomness.streak * 100)}`;
 
-  const curveSummary =
-    sides && mean !== null && fair !== null && series.length > 0
-      ? [
-          `Odds for a d${sides}. Expected face ${mean.toFixed(2)}, fair ${fair.toFixed(1)}.`,
-          `Face 1 is ${((series[0]?.p ?? 0) * 100).toFixed(1)} percent.`,
-          `Face ${sides} is ${((series[series.length - 1]?.p ?? 0) * 100).toFixed(1)} percent.`,
-          showPoolExpected && poolExpected !== null ? `Pool expected total ${poolExpected.toFixed(2)}.` : "",
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : null;
+  const curveSummary = useMemo(() => {
+    if (!sides || mean === null || fair === null || series.length === 0) return null;
+    const midIndex = Math.floor(series.length / 2);
+    const midFace = series[midIndex];
+    const bits = [
+      `Odds for a d${sides}. Expected face ${mean.toFixed(2)}, fair ${fair.toFixed(1)}.`,
+      `Face 1 is ${((series[0]?.p ?? 0) * 100).toFixed(1)} percent.`,
+    ];
+    if (series.length > 2 && midFace) {
+      bits.push(`Middle face ${midFace.face} is ${((midFace.p ?? 0) * 100).toFixed(1)} percent.`);
+    }
+    bits.push(`Face ${sides} is ${((series[series.length - 1]?.p ?? 0) * 100).toFixed(1)} percent.`);
+    if (showPoolExpected && poolExpected !== null) {
+      bits.push(`Pool expected total ${poolExpected.toFixed(2)}.`);
+    }
+    return bits.join(" ");
+  }, [sides, mean, fair, series, showPoolExpected, poolExpected]);
 
   return (
     <Card className="rounded-xl" role="region" aria-labelledby="randomness-heading">
@@ -194,6 +207,39 @@ export function RandomnessLab() {
         </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-labelledby="bias-presets-label">
+          <span id="bias-presets-label" className="text-[0.7rem] uppercase tracking-wider text-subtle">
+            <SpokenLabel>Presets</SpokenLabel>:
+          </span>
+          {BIAS_PRESETS.map((preset) => {
+            const isMatch =
+              Math.abs(randomness.luck - preset.luck) < 0.01 &&
+              Math.abs(randomness.chaos - preset.chaos) < 0.01 &&
+              Math.abs(randomness.streak - preset.streak) < 0.01;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                title={preset.hint}
+                aria-pressed={isMatch}
+                aria-label={`${preset.label}: ${preset.hint}`}
+                onClick={() => {
+                  patchRandomness({ luck: preset.luck, chaos: preset.chaos, streak: preset.streak });
+                  toast(`Applied ${preset.label} bias preset`);
+                }}
+                className={cn(
+                  "h-7 rounded-full border px-2.5 text-xs transition-colors",
+                  isMatch
+                    ? "border-primary bg-primary font-medium text-primary-foreground"
+                    : "border-border bg-elevated text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                )}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+
         <FactorRow
           id="factor-luck"
           label="Luck"
@@ -240,14 +286,18 @@ export function RandomnessLab() {
         <div>
           {sides && mean !== null && fair !== null ? (
             <>
-              <div className="mb-2 flex min-w-0 items-start justify-between gap-3">
+              <div className="mb-2 flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <div className="min-w-0 flex-1">
                   <FieldMeta
                     label={`d${sides} curve`}
                     hint="Odds of each face on this die. Pool E is the average total the table will compare against — keep, explode, and extra dice are included."
                   />
                 </div>
-                <p className="shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                <p className="shrink-0 text-left font-mono text-xs tabular-nums text-muted-foreground sm:text-right">
+                  <span className="sr-only">
+                    Expected face {mean.toFixed(2)}, fair {fair.toFixed(1)}
+                    {showPoolExpected && poolExpected !== null ? `, pool expected total ${poolExpected.toFixed(2)}` : ""}
+                  </span>
                   <span aria-hidden="true">
                     E[{mean.toFixed(2)}]
                     <span className="mx-1 text-subtle">vs</span>
@@ -324,11 +374,13 @@ export function RandomnessLab() {
               />
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <label htmlFor="seed-lock" className="text-xs font-medium tracking-wide text-muted-foreground">
+              <label id="seed-lock-label" htmlFor="seed-lock" className="text-xs font-medium tracking-wide text-muted-foreground">
                 Lock
               </label>
               <Switch
                 id="seed-lock"
+                aria-label="Lock seed"
+                aria-labelledby="seed-lock-label"
                 checked={randomness.seedLocked}
                 title="When on, rolls follow this seed instead of true random"
                 aria-describedby="seed-lock-hint"

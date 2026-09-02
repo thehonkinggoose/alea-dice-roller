@@ -218,6 +218,35 @@ export function JawsTutorial() {
           ),
         },
         {
+          id: "voiceover-ios",
+          title: "VoiceOver on iOS (iPhone & iPad)",
+          children: (
+            <>
+              <p>
+                Alea is engineered for Apple VoiceOver on iOS Safari. While desktop uses JAWS or NVDA keyboard shortcuts, iOS operates via standard touch and rotor gestures.
+              </p>
+              <h4 className="font-medium text-foreground">Navigation & The Rotor</h4>
+              <ul className="list-disc space-y-1.5 pl-5">
+                <li>
+                  <strong className="font-medium text-foreground">Headings Rotor:</strong> Two-finger rotate to “Headings”, then flick down with one finger to jump between primary landmarks: Alea (h1), Last cast (h2), Session statistics (h2), Pool (h2), Randomness (h2), and Results (h2).
+                </li>
+                <li>
+                  <strong className="font-medium text-foreground">Mobile Results Cards:</strong> On phone screens, results are presented as accessible cards (<span className="font-mono text-xs text-foreground">&lt;article&gt;</span>). Flick down in Headings rotor to jump directly from roll to roll.
+                </li>
+                <li>
+                  <strong className="font-medium text-foreground">Sliders:</strong> Focus Luck, Chaos, or Streak, then flick up with one finger to increase or down to decrease. VoiceOver reads the qualitative status (e.g. “Chaos 50”, “Luck +20”).
+                </li>
+                <li>
+                  <strong className="font-medium text-foreground">Switches:</strong> Double-tap to toggle Exploding dice or Lock seed. Both switches expose explicit accessible names and current state.
+                </li>
+                <li>
+                  <strong className="font-medium text-foreground">Batch & Critical Rolls:</strong> Live regions announce the full batch summary when casting multiple times (e.g. 6 ability scores), and highlight critical hits (“Natural 20!”) and fumbles (“Natural 1!”).
+                </li>
+              </ul>
+            </>
+          ),
+        },
+        {
           id: "reference",
           title: "JAWS keystroke reference",
           children: (
@@ -307,11 +336,14 @@ export function JawsTutorial() {
                   <strong className="font-medium text-foreground">Roll is silent and disabled.</strong> The name should include “waits for a valid pool.” Read the live readout under Pool.
                 </li>
                 <li>
-                  <strong className="font-medium text-foreground">The curve is missing.</strong> Invalid notation. The lab does not fake a d20 while the pool is illegal.
+                  <strong className="font-medium text-foreground">VoiceOver iOS switches.</strong> Both Exploding and Lock provide explicit accessible names and announce on/off states on double-tap.
+                </li>
+                <li>
+                  <strong className="font-medium text-foreground">Clearing history keeps your place.</strong> The Clear action preserves focus on the Results heading with an accessible confirmation so VoiceOver and JAWS never lose their place.
                 </li>
               </ul>
               <p>
-                The FAQ tab answers product questions (exploding, streak, seed, history). This page is only how JAWS drives the table.
+                The FAQ tab answers product questions (exploding, streak, seed, history). This page covers JAWS Professional 2026 and VoiceOver on iOS.
               </p>
             </>
           ),

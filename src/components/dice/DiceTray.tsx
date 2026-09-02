@@ -2,16 +2,27 @@ import { useMemo } from "react";
 import { DieFace } from "@/components/dice/DieFace";
 import { SpokenLabel } from "@/components/dice/SpokenLabel";
 import { Badge } from "@/components/ui/badge";
-import { rollFactorFlags } from "@/lib/dice/engine";
+import { describeRollAnnouncement } from "@/lib/dice/a11y";
+import { chaosLoaded, luckLoaded, rollFactorFlags, streakLoaded } from "@/lib/dice/engine";
 import { useDiceStore } from "@/lib/dice/store";
+import { cn } from "@/lib/utils";
 
 export function DiceTray() {
   const last = useDiceStore((s) => s.last);
+  const lastBatch = useDiceStore((s) => s.lastBatch);
+  const rollCount = useDiceStore((s) => s.rollCount);
   const rolling = useDiceStore((s) => s.rolling);
+  const randomness = useDiceStore((s) => s.randomness);
+  const isLoaded =
+    luckLoaded(randomness.luck) ||
+    chaosLoaded(randomness.chaos) ||
+    streakLoaded(randomness.streak) ||
+    randomness.seedLocked;
 
   const kept = last?.dice.filter((d) => d.kept) ?? [];
   const dropped = last?.dice.filter((d) => !d.kept) ?? [];
-  const delta = last ? last.total - last.expected : 0;
+  const rawDelta = last ? last.total - last.expected : 0;
+  const delta = Math.abs(rawDelta) < 0.05 ? 0 : rawDelta;
   const n = kept.length + dropped.length;
   const step = n > 12 ? Math.max(12, Math.floor(400 / Math.max(n - 1, 1))) : 40;
   const flags = last ? rollFactorFlags(last) : null;
@@ -21,11 +32,10 @@ export function DiceTray() {
     return String(last.total);
   }, [last]);
 
-  const announcement = rolling
-    ? "Rolling."
-    : last
-      ? `Total ${last.total} from ${last.notation}. Expected ${last.expected.toFixed(1)}, ${delta >= 0 ? "plus" : "minus"} ${Math.abs(delta).toFixed(1)} versus expected.`
-      : "";
+  const announcement = useMemo(() => {
+    if (!last) return "";
+    return describeRollAnnouncement(last, rollCount, lastBatch);
+  }, [last, rollCount, lastBatch]);
 
   return (
     <section
@@ -41,7 +51,20 @@ export function DiceTray() {
           <p className="mt-1 text-xs leading-snug text-subtle">
             The most recent roll’s total, then each die. Faded dice were dropped by Keep.
           </p>
-          <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{last ? last.notation : "No rolls yet"}</p>
+          <p className="mt-1 break-all font-mono text-sm text-muted-foreground">
+            {last ? (
+              <>
+                {last.notation}
+                {lastBatch && lastBatch.length > 1 ? (
+                  <span className="ml-2 font-sans text-xs text-subtle">
+                    (roll {lastBatch.length} of {lastBatch.length} in batch)
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              "No rolls yet"
+            )}
+          </p>
         </div>
         {last ? (
           <div className="flex max-w-[50%] min-w-0 flex-wrap justify-end gap-1.5" data-testid="tray-factors" aria-label="Factors that were on for this roll">
@@ -75,11 +98,21 @@ export function DiceTray() {
               </Badge>
             ) : null}
           </div>
+        ) : isLoaded ? (
+          <div className="flex max-w-[50%] min-w-0 flex-wrap justify-end gap-1.5" data-testid="tray-factors" aria-label="Table factors">
+            <Badge
+              variant="outline"
+              title="Luck, chaos, streak, or seed bias is active"
+              aria-label="Table is loaded with bias"
+            >
+              Loaded
+            </Badge>
+          </div>
         ) : null}
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center py-6">
-        <div aria-live="polite" aria-atomic="true">
+        <div aria-live="polite" aria-atomic="true" role="status">
           <p
             className="font-display text-5xl tabular-nums leading-none tracking-tight text-foreground sm:text-6xl lg:text-7xl"
             aria-hidden="true"
@@ -89,19 +122,42 @@ export function DiceTray() {
           <p className="sr-only">{announcement}</p>
         </div>
         {last ? (
-          <p className="mt-3 max-w-sm px-1 text-center text-sm text-muted-foreground text-pretty">
-            Expected {last.expected.toFixed(1)}
-            <span className="mx-1.5 text-subtle" aria-hidden="true">
-              ·
-            </span>
-            <span className={delta >= 0 ? "text-max" : "text-crit"}>
-              {delta >= 0 ? "+" : ""}
-              {delta.toFixed(1)} vs expected
-            </span>
-            <span className="mt-1 block text-xs text-subtle">
-              Expected is the average total for this pool with the luck, chaos, and streak that were on for this roll.
-            </span>
-          </p>
+          <>
+            <p className="mt-3 max-w-sm px-1 text-center text-sm text-muted-foreground text-pretty">
+              Expected {last.expected.toFixed(1)}
+              <span className="mx-1.5 text-subtle" aria-hidden="true">
+                ·
+              </span>
+              <span className={delta >= 0 ? "text-max" : "text-crit"}>
+                {delta >= 0 ? "+" : ""}
+                {delta.toFixed(1)} vs expected
+              </span>
+              <span className="mt-1 block text-xs text-subtle">
+                Expected is the average total for this pool with the luck, chaos, and streak that were on for this roll.
+              </span>
+            </p>
+            {lastBatch && lastBatch.length > 1 ? (
+              <div
+                className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5 px-2 font-mono text-xs text-muted-foreground"
+                aria-label={`Batch of ${lastBatch.length} rolls`}
+              >
+                <span className="font-sans text-xs text-subtle">Batch totals:</span>
+                {lastBatch.map((r, i) => (
+                  <span
+                    key={r.id || i}
+                    className={cn(
+                      "rounded border px-1.5 py-0.5 tabular-nums",
+                      i === lastBatch.length - 1
+                        ? "border-primary/50 bg-elevated font-medium text-foreground"
+                        : "border-border/70 bg-card text-muted-foreground",
+                    )}
+                  >
+                    {r.total}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : (
           <p className="mt-3 max-w-xs text-center text-sm text-muted-foreground text-pretty">
             Build a pool, then roll. Spacebar casts from anywhere except a text field.

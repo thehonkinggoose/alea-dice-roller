@@ -4,7 +4,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   if (target.closest("input, textarea, select, [contenteditable='true']")) return true;
   if (
     target.closest(
-      "a, [href], button, [role='button'], [role='switch'], [role='slider'], [role='link'], [role='radio'], [role='tab'], [role='menuitem'], [role='option'], [role='combobox'], [role='spinbutton']",
+      "a, [href], button, [role='button'], [role='switch'], [role='slider'], [role='link'], [role='radio'], [role='tab'], [role='menuitem'], [role='option'], [role='combobox'], [role='spinbutton'], summary, details, [role='region'], table, [role='table'], [role='grid']",
     )
   ) {
     return true;

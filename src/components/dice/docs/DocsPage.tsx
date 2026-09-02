@@ -78,6 +78,29 @@ type Props = {
   sections: DocsSection[];
 };
 
+function DocsNavLink({ to, label }: { to: string; label: string }) {
+  const base = import.meta.env.BASE_URL;
+  const prefix = base && base !== "/" ? base.replace(/\/$/, "") : "";
+  const href = `${prefix}${to}`;
+
+  return (
+    <a
+      className={cn(FOCUS_RING, "inline-flex h-11 items-center rounded-md px-3 text-foreground hover:bg-elevated")}
+      href={href}
+      onClick={(e) => {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        if (typeof window !== "undefined") {
+          e.preventDefault();
+          window.history.pushState({}, "", href);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      }}
+    >
+      {label}
+    </a>
+  );
+}
+
 export function DocsPage({ eyebrow, title, headingId, lede, sections }: Props) {
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
@@ -133,21 +156,11 @@ export function DocsPage({ eyebrow, title, headingId, lede, sections }: Props) {
       ))}
 
       <nav aria-label="Other pages" className="flex flex-wrap gap-2 text-sm">
-        <a className={cn(FOCUS_RING, "inline-flex h-11 items-center rounded-md px-3 text-foreground hover:bg-elevated")} href="/">
-          Table
-        </a>
-        <a className={cn(FOCUS_RING, "inline-flex h-11 items-center rounded-md px-3 text-foreground hover:bg-elevated")} href="/guide">
-          Guide
-        </a>
-        <a className={cn(FOCUS_RING, "inline-flex h-11 items-center rounded-md px-3 text-foreground hover:bg-elevated")} href="/faq">
-          FAQ
-        </a>
-        <a className={cn(FOCUS_RING, "inline-flex h-11 items-center rounded-md px-3 text-foreground hover:bg-elevated")} href="/keys">
-          Keys
-        </a>
-        <a className={cn(FOCUS_RING, "inline-flex h-11 items-center rounded-md px-3 text-foreground hover:bg-elevated")} href="/tests">
-          Tests
-        </a>
+        <DocsNavLink to="/" label="Table" />
+        <DocsNavLink to="/guide" label="Guide" />
+        <DocsNavLink to="/faq" label="FAQ" />
+        <DocsNavLink to="/keys" label="Keys" />
+        <DocsNavLink to="/tests" label="Tests" />
       </nav>
     </div>
   );

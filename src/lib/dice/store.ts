@@ -38,6 +38,8 @@ export const PRESETS: { label: string; notation: string; repeat?: number; hint: 
   { label: "8d6", notation: "8d6", hint: "Eight six-sided dice" },
 ];
 
+import { playDiceRollSound } from "./sound";
+
 export const DIE_SIDES = [4, 6, 8, 10, 12, 20, 100] as const;
 
 type PersistShape = {
@@ -45,23 +47,31 @@ type PersistShape = {
   pool: PoolControls;
   randomness: Randomness;
   history: RollRecord[];
+  soundEnabled?: boolean;
 };
 
 type DiceState = PersistShape & {
   last: RollRecord | null;
+  lastBatch: RollRecord[] | null;
+  rollCount: number;
   rolling: boolean;
   error: string | null;
   hydrated: boolean;
   poolNotice: string | null;
   rngNotice: string | null;
+  soundEnabled: boolean;
   setNotation: (value: string, fromPool?: boolean) => void;
   patchPool: (patch: Partial<PoolControls>) => void;
   patchRandomness: (patch: Partial<Randomness>) => void;
   resetRandomness: () => void;
   applyPreset: (notation: string, repeat?: number) => void;
+  loadPoolFromNotation: (notation: string) => boolean;
   roll: (timesOverride?: number) => RollRecord[] | null;
   reroll: (record?: RollRecord) => RollRecord[] | null;
+  deleteRoll: (id: string) => void;
+  restoreHistory: (records: RollRecord[]) => void;
   clearHistory: () => void;
+  toggleSound: () => void;
   hydrate: () => void;
 };
 
@@ -160,6 +170,7 @@ function persist(state: PersistShape) {
       pool: state.pool,
       randomness: state.randomness,
       history: state.history.slice(0, MAX_HISTORY),
+      soundEnabled: state.soundEnabled,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
@@ -244,9 +255,18 @@ export const useDiceStore = create<DiceState>((set, get) => {
       nextHistory = [record, ...nextHistory].slice(0, MAX_HISTORY);
     }
 
+    if (get().soundEnabled) {
+      const lastRec = records[records.length - 1];
+      const hasCrit = lastRec?.dice.some((d) => d.kept && d.sides >= 20 && d.face === d.sides);
+      const hasFumble = lastRec?.dice.some((d) => d.kept && d.sides >= 20 && d.face === 1);
+      playDiceRollSound({ isCrit: Boolean(hasCrit), isFumble: Boolean(hasFumble) });
+    }
+
     set({
       history: nextHistory,
       last: records[records.length - 1] ?? null,
+      lastBatch: records.length > 1 ? records : null,
+      rollCount: (get().rollCount || 0) + 1,
       randomness: { ...randomness, streamIndex },
       rolling: true,
       error: null,
@@ -262,11 +282,14 @@ export const useDiceStore = create<DiceState>((set, get) => {
     randomness: { ...DEFAULT_RANDOMNESS },
     history: [],
     last: null,
+    lastBatch: null,
+    rollCount: 0,
     rolling: false,
     error: null,
     hydrated: false,
     poolNotice: null,
     rngNotice: null,
+    soundEnabled: false,
 
     hydrate: () => {
       if (get().hydrated || typeof window === "undefined") return;
@@ -284,6 +307,7 @@ export const useDiceStore = create<DiceState>((set, get) => {
             rolling: false,
             poolNotice: null,
             rngNotice: null,
+            soundEnabled: Boolean(saved.soundEnabled),
           });
         }
       } catch {
@@ -368,6 +392,22 @@ export const useDiceStore = create<DiceState>((set, get) => {
       }
     },
 
+    loadPoolFromNotation: (notation: string) => {
+      try {
+        const parsed = parseNotation(notation);
+        const derived = poolFromExpression(parsed);
+        const pool = derived
+          ? sanitizePool({ ...get().pool, ...derived })
+          : get().pool;
+        set({ notation, pool, error: null, poolNotice: null });
+        persist(get());
+        return true;
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : "Invalid expression." });
+        return false;
+      }
+    },
+
     roll: (timesOverride?: number) => {
       const { notation, pool } = get();
       return cast(notation, timesOverride ?? pool.repeat);
@@ -380,12 +420,41 @@ export const useDiceStore = create<DiceState>((set, get) => {
       return cast(target.notation, 1);
     },
 
+    deleteRoll: (id: string) => {
+      const currentHistory = get().history;
+      const nextHistory = currentHistory.filter((r) => r.id !== id);
+      if (nextHistory.length === currentHistory.length) return;
+      const nextLast = nextHistory[0] ?? null;
+      const nextLastBatch = get().lastBatch ? get().lastBatch!.filter((r) => r.id !== id) : null;
+      set({
+        history: nextHistory,
+        last: nextLast,
+        lastBatch: nextLastBatch && nextLastBatch.length > 1 ? nextLastBatch : null,
+      });
+      persist(get());
+    },
+
+    restoreHistory: (records: RollRecord[]) => {
+      const history = sanitizeHistory(records);
+      set({
+        history,
+        last: history[0] ?? null,
+      });
+      persist(get());
+    },
+
     clearHistory: () => {
       if (rollAnimTimer) {
         clearTimeout(rollAnimTimer);
         rollAnimTimer = null;
       }
-      set({ history: [], last: null, rolling: false });
+      set({ history: [], last: null, lastBatch: null, rolling: false });
+      persist(get());
+    },
+
+    toggleSound: () => {
+      const next = !get().soundEnabled;
+      set({ soundEnabled: next });
       persist(get());
     },
   };

@@ -300,7 +300,9 @@ export function Assay() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "alea-assay.json";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(url);
     toast("Exported assay JSON");
   }

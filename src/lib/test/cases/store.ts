@@ -1,7 +1,7 @@
 import { PRESETS, DIE_SIDES, useDiceStore } from "@/lib/dice/store";
 import { parseNotation } from "@/lib/dice/notation";
 import { makeRoll } from "@/lib/dice/engine";
-import { fakeRoll, resetStore, withStore } from "@/lib/test/helpers";
+import { fakeRoll, withStore } from "@/lib/test/helpers";
 import type { TestDef } from "@/lib/test/harness";
 
 export const storeCases: TestDef[] = [
