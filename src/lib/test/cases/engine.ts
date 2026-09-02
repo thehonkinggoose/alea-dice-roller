@@ -226,6 +226,12 @@ export const engineCases: TestDef[] = [
       t.eq(a, b, "deterministic");
       t.approx(a, 3.5, 0.15, "fair ~3.5");
       t.ok(lucky > a + 0.8, "luck raises expected");
+      const d20 = estimateExpected(parseNotation("1d20"), 0, 0.5, 0);
+      t.approx(d20, 10.5, 1e-9, "fair 1d20 exact expected is 10.5");
+      const d6Exact = estimateExpected(parseNotation("1d6"), 0, 0.5, 0);
+      t.approx(d6Exact, 3.5, 1e-9, "fair 1d6 exact expected is 3.5");
+      const compoundExact = estimateExpected(parseNotation("2d6+3"), 0, 0.5, 0);
+      t.approx(compoundExact, 10, 1e-9, "fair 2d6+3 exact expected is 10");
     },
   },
   {
@@ -537,4 +543,34 @@ export const engineCases: TestDef[] = [
       t.eq(rollFactorFlags(dusty.record).chaos, false, "dusty chaos flag off");
     },
   },
+  {
+    id: "engine-dropped-exploded-and-subtick-estimate",
+    suite: "Roll records",
+    name: "Dropped exploded dice show !↓; sub-tick factors match fair expected",
+    description: "An exploded die in a dropped group formats with both ! and ↓. Sub-tick luck/chaos/bias in estimateExpected produce the exact same deterministic expected as fair.",
+    why: "Dropped exploded faces without ↓ appear counted in the total, causing disputes over rolls. Sub-tick factors must not desync the lab and table.",
+    run: (t) => {
+      const line = formatRollLine(
+        fakeRoll({
+          notation: "2d6kh1!",
+          total: 6,
+          dice: [
+            fakeDie({ id: "a", face: 6, sides: 6, exploded: false, kept: true }),
+            fakeDie({ id: "b", face: 6, sides: 6, exploded: false, kept: false }),
+            fakeDie({ id: "c", face: 3, sides: 6, exploded: true, kept: false }),
+          ],
+        }),
+      );
+      t.note("line", line);
+      t.ok(line.includes("6!↓") === false, "non-exploded dropped die is just 6↓");
+      t.ok(line.includes("6↓"), "dropped first die has ↓");
+      t.ok(line.includes("3!↓"), "dropped exploded die has !↓");
+
+      const statsPool = parseNotation("4d6dl1");
+      const fairExpected = estimateExpected(statsPool, 0, 0.5, 0);
+      const subTickExpected = estimateExpected(statsPool, 0.004, 0.504, 0.004);
+      t.eq(subTickExpected, fairExpected, "sub-tick estimateExpected matches fair exactly");
+    },
+  },
 ];
+

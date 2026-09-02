@@ -114,6 +114,8 @@ export const notationCases: TestDef[] = [
       t.eq(diceTerm(parseNotation("2d6kh9")).keep.n, 2, "kh9 clamps to count");
       t.eq(diceTerm(parseNotation("4d6dl5")).keep, { mode: "highest", n: 1 }, "over-drop keeps 1");
       t.eq(diceTerm(parseNotation("2d6kl0")).keep.n, 1, "kl0 treated as 1");
+      t.eq(diceTerm(parseNotation("4d6dl0")).keep, { mode: "none", n: 4 }, "dl0 drops nothing, keeps all");
+      t.eq(diceTerm(parseNotation("4d6dh0")).keep, { mode: "none", n: 4 }, "dh0 drops nothing, keeps all");
     },
   },
   {

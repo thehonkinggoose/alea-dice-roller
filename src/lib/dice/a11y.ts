@@ -12,12 +12,13 @@ export function describeDie(die: DieFace): string {
 }
 
 export function describeDieTitle(die: DieFace): string {
-  const sign = (die.sign ?? 1) < 0 ? "−" : "";
+  const isPositive = (die.sign ?? 1) > 0;
+  const sign = isPositive ? "" : "−";
   const natNote =
-    die.kept && die.sides === 20
+    die.kept && die.sides === 20 && isPositive
       ? die.face === 20
         ? " (Natural 20!)"
-        : die.face === 1
+        : die.face === 1 && !die.exploded
           ? " (Natural 1!)"
           : ""
       : "";
@@ -40,12 +41,12 @@ export function describeRollAnnouncement(
   const deltaText = `${delta >= 0 ? "plus" : "minus"} ${Math.abs(delta).toFixed(1)} versus expected`;
 
   const highlights: string[] = [];
-  const nat20 = roll.dice.some((d) => d.sides === 20 && d.face === 20 && d.kept);
-  const nat1 = roll.dice.some((d) => d.sides === 20 && d.face === 1 && d.kept);
-  const anyExploded = roll.dice.some((d) => d.exploded);
+  const nat20 = roll.dice.some((d) => d.sides === 20 && d.face === 20 && d.kept && (d.sign ?? 1) > 0);
+  const nat1 = roll.dice.some((d) => d.sides === 20 && d.face === 1 && d.kept && !d.exploded && (d.sign ?? 1) > 0);
+  const anyExploded = roll.dice.some((d) => d.kept && d.exploded);
 
   if (nat20) highlights.push("Natural 20!");
-  else if (nat1) highlights.push("Natural 1!");
+  if (nat1) highlights.push("Natural 1!");
   if (anyExploded) highlights.push("Exploded!");
 
   const highlightNotice = highlights.length > 0 ? ` ${highlights.join(" ")}` : "";

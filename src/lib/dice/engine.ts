@@ -171,6 +171,13 @@ export function evaluateExpression(
   return { dice, modifier: parsed.modifier, total };
 }
 
+const EXPECTED_CACHE_MAX = 500;
+const expectedCache = new Map<string, number>();
+
+export function clearExpectedCache(): void {
+  expectedCache.clear();
+}
+
 export function estimateExpected(
   parsed: ParsedExpression,
   luck: number,
@@ -178,20 +185,53 @@ export function estimateExpected(
   streakBias: number,
   samples = EXPECTED_SAMPLES,
 ): number {
-  const seed = hashSeed(
-    JSON.stringify({
-      raw: parsed.raw,
-      luck: round4(luck),
-      chaos: round4(chaos),
-      streakBias: round4(streakBias),
-    }),
+  const effLuck = effectiveLuck(luck);
+  const effChaos = effectiveChaos(chaos);
+  const effBias = effectiveBias(streakBias);
+  const cacheKey = `${parsed.raw}|${round4(effLuck)}|${round4(effChaos)}|${round4(effBias)}|${samples}`;
+  const cached = expectedCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const diceTerms = parsed.terms.filter(
+    (t): t is { kind: "dice"; term: import("./types").DiceTerm } => t.kind === "dice",
   );
-  const rng = mulberry32(seed);
-  let acc = 0;
-  for (let i = 0; i < samples; i++) {
-    acc += evaluateExpression(parsed, { luck, chaos }, streakBias, rng).total;
+  const canUseExact =
+    diceTerms.length > 0 &&
+    diceTerms.every(
+      (t) => !t.term.exploding && (t.term.keep.mode === "none" || t.term.keep.n >= t.term.count),
+    );
+
+  let result: number;
+  if (canUseExact) {
+    let exact = parsed.modifier;
+    for (const t of diceTerms) {
+      const w = faceWeights(t.term.sides, effLuck, effChaos, effBias);
+      exact += t.term.sign * t.term.count * expectedFace(w);
+    }
+    result = exact;
+  } else {
+    const seed = hashSeed(
+      JSON.stringify({
+        raw: parsed.raw,
+        luck: round4(effLuck),
+        chaos: round4(effChaos),
+        streakBias: round4(effBias),
+      }),
+    );
+    const rng = mulberry32(seed);
+    let acc = 0;
+    for (let i = 0; i < samples; i++) {
+      acc += evaluateExpression(parsed, { luck: effLuck, chaos: effChaos }, effBias, rng).total;
+    }
+    result = acc / samples;
   }
-  return acc / samples;
+
+  if (expectedCache.size >= EXPECTED_CACHE_MAX) {
+    const oldestKey = expectedCache.keys().next().value;
+    if (oldestKey) expectedCache.delete(oldestKey);
+  }
+  expectedCache.set(cacheKey, result);
+  return result;
 }
 
 function round4(n: number): number {
@@ -236,7 +276,7 @@ export function formatRollLine(record: RollRecord): string {
   const faces = record.dice
     .map((d) => {
       const sign = d.sign < 0 ? "−" : "";
-      const mark = d.exploded ? "!" : d.kept ? "" : "↓";
+      const mark = d.exploded ? (d.kept ? "!" : "!↓") : d.kept ? "" : "↓";
       return `${sign}${d.face}${mark}`;
     })
     .join(", ");

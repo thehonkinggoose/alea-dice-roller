@@ -42,7 +42,11 @@ function parseKeep(raw: string | undefined, count: number): DiceTerm["keep"] {
     return { mode: "none", n: count };
   }
 
-  const n = Math.max(1, Number.parseInt(digits, 10) || 1);
+  const parsedInt = Number.parseInt(digits, 10);
+  if (drop && parsedInt === 0) {
+    return { mode: "none", n: count };
+  }
+  const n = Math.max(1, parsedInt || 1);
   if (drop) {
     return { mode, n: Math.max(1, count - n) };
   }

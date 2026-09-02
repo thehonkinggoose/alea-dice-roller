@@ -7,7 +7,7 @@ import { SpokenLabel } from "@/components/dice/SpokenLabel";
 import { StatsStrip } from "@/components/dice/StatsStrip";
 import { Stepper } from "@/components/dice/Stepper";
 import { DiceTray } from "@/components/dice/DiceTray";
-import { ResultsTable } from "@/components/dice/ResultsTable";
+import { filterHistory, ResultsTable, signedFaces } from "@/components/dice/ResultsTable";
 import { RollPanel } from "@/components/dice/RollPanel";
 import { labStatusText, RandomnessLab } from "@/components/dice/RandomnessLab";
 import { Faq } from "@/components/dice/docs/Faq";
@@ -873,6 +873,14 @@ export const uiCases: TestDef[] = [
       t.ok(batchAnnouncement.includes("Batch of 4 rolls: totals 14, 11, 16, 18"), "batch announcement lists all totals");
       t.ok(batchAnnouncement.includes("Last roll: Total 18 from 4d6kh3"), "batch mentions last roll");
 
+      const neg20Roll = fakeRoll({ notation: "2d6-1d20", total: -8, expected: -3.5, dice: [fakeDie({ face: 20, sides: 20, kept: true, sign: -1 })] });
+      const negAnnouncement = describeRollAnnouncement(neg20Roll, 5);
+      t.ok(!negAnnouncement.includes("Natural 20!"), "subtracted die rolling 20 does not announce Natural 20!");
+
+      const droppedExplosion = fakeRoll({ notation: "4d6dl1!", total: 12, dice: [fakeDie({ face: 6, sides: 6, kept: false, exploded: true })] });
+      const droppedExpAnnouncement = describeRollAnnouncement(droppedExplosion, 6);
+      t.ok(!droppedExpAnnouncement.includes("Exploded!"), "dropped explosion does not announce Exploded!");
+
       // 2. Switches in RollPanel and RandomnessLab have accessible names
       withStore(() => {
         const rollPanel = html(createElement(RollPanel));
@@ -911,6 +919,9 @@ export const uiCases: TestDef[] = [
         t.eq(useDiceStore.getState().pool.count, 3, "pool count updated");
         t.eq(useDiceStore.getState().pool.sides, 8, "pool sides updated");
         t.eq(useDiceStore.getState().pool.modifier, 4, "pool modifier updated");
+        useDiceStore.getState().patchPool({ repeat: 4 });
+        store.loadPoolFromNotation("2d6");
+        t.eq(useDiceStore.getState().pool.repeat, 4, "loadPoolFromNotation preserves repeat");
 
         // 2. deleteRoll and restoreHistory
         const r1 = fakeRoll({ id: "roll-1", notation: "1d20", total: 15 });
@@ -944,6 +955,84 @@ export const uiCases: TestDef[] = [
     },
   },
   {
+    id: "ui-exploded-fumble-and-table-fairness",
+    suite: "Interface",
+    name: "Exploded extra die rolling 1 is not a fumble; table caption omits literal $",
+    description: "An explosion bonus die rolling 1 does not receive a fumble ring or title. Both Natural 20 and 1 are announced if both occur on kept dice. ResultsTable caption omits literal $.",
+    why: "Extra dice from exploding hits are bonuses, not fumbles. Simultaneous crits and fumbles in multi-die rolls must both be announced.",
+    run: (t) => {
+      const explodedOne = html(createElement(DieFace, { die: fakeDie({ face: 1, sides: 20, exploded: true, kept: true }) }));
+      t.ok(!explodedOne.includes("ring-crit"), "exploded 1 on d20 does not receive crit/fumble ring");
+      t.ok(!describeDieTitle(fakeDie({ face: 1, sides: 20, exploded: true, kept: true })).includes("Natural 1!"), "exploded 1 title omits Natural 1!");
+
+      const normalOne = html(createElement(DieFace, { die: fakeDie({ face: 1, sides: 20, exploded: false, kept: true }) }));
+      t.ok(normalOne.includes("ring-crit"), "normal 1 on d20 receives crit/fumble ring");
+      t.ok(describeDieTitle(fakeDie({ face: 1, sides: 20, exploded: false, kept: true })).includes("Natural 1!"), "normal 1 title has Natural 1!");
+
+      const dualRoll = fakeRoll({
+        notation: "2d20",
+        total: 21,
+        dice: [
+          fakeDie({ id: "a", face: 20, sides: 20, kept: true }),
+          fakeDie({ id: "b", face: 1, sides: 20, kept: true }),
+        ],
+      });
+      const dualAnnouncement = describeRollAnnouncement(dualRoll);
+      t.ok(dualAnnouncement.includes("Natural 20!"), "dual announcement includes Natural 20!");
+      t.ok(dualAnnouncement.includes("Natural 1!"), "dual announcement also includes Natural 1!");
+
+      // signedFaces drops format with !↓
+      const droppedExplodedRoll = fakeRoll({
+        notation: "2d6kh1!",
+        dice: [
+          fakeDie({ id: "k", face: 6, sides: 6, kept: true, exploded: false }),
+          fakeDie({ id: "d1", face: 6, sides: 6, kept: false, exploded: false }),
+          fakeDie({ id: "d2", face: 4, sides: 6, kept: false, exploded: true }),
+        ],
+      });
+      const facesText = signedFaces(droppedExplodedRoll, null);
+      t.ok(facesText.includes("4!↓"), "signedFaces formats dropped exploded die as 4!↓");
+
+      // filterHistory edge cases: penalty dice and exploded dice
+      const penaltyRollCrit = fakeRoll({
+        id: "p1",
+        notation: "2d6-1d4",
+        dice: [
+          fakeDie({ id: "a", face: 3, sides: 6, kept: true, sign: 1 }),
+          fakeDie({ id: "b", face: 4, sides: 4, kept: true, sign: -1 }),
+        ],
+      });
+      t.eq(filterHistory([penaltyRollCrit], "crits", "").length, 0, "penalty die rolling max is not a crit");
+
+      const penaltyRollFumble = fakeRoll({
+        id: "p2",
+        notation: "2d6-1d4",
+        dice: [
+          fakeDie({ id: "a", face: 3, sides: 6, kept: true, sign: 1 }),
+          fakeDie({ id: "b", face: 1, sides: 4, kept: true, sign: -1 }),
+        ],
+      });
+      t.eq(filterHistory([penaltyRollFumble], "fumbles", "").length, 0, "penalty die rolling 1 is not a fumble");
+
+      const explodedOneRoll = fakeRoll({
+        id: "ex1",
+        notation: "1d20!",
+        dice: [
+          fakeDie({ id: "a", face: 20, sides: 20, kept: true, sign: 1, exploded: false }),
+          fakeDie({ id: "b", face: 1, sides: 20, kept: true, sign: 1, exploded: true }),
+        ],
+      });
+      t.eq(filterHistory([explodedOneRoll], "fumbles", "").length, 0, "exploded die rolling 1 is not a fumble");
+      t.eq(filterHistory([explodedOneRoll], "crits", "").length, 1, "original natural 20 is still a crit");
+
+      // Search query whitespace and typographic minus normalization
+      const subRoll = fakeRoll({ id: "s1", notation: "2d6-1d4", total: -5 });
+      t.eq(filterHistory([subRoll], "all", "2d6 - 1d4").length, 1, "search with spaces matches compact notation");
+      t.eq(filterHistory([subRoll], "all", "2d6−1d4").length, 1, "search with typographic minus matches formula");
+      t.eq(filterHistory([subRoll], "all", "−5").length, 1, "search with typographic minus matches total");
+    },
+  },
+  {
     id: "ui-qol-history-browser",
     suite: "Interface",
     name: "ResultsTable interactive history QoL: load into pool, filter, and delete",
@@ -965,6 +1054,8 @@ export const uiCases: TestDef[] = [
           t.ok(markup.includes("Filter roll history"), "search input rendered with history");
           t.ok(markup.includes("Load 2d6+3 into active pool"), "load pool action rendered");
           t.ok(markup.includes("Delete roll 2d6+3"), "delete roll action rendered");
+          t.ok(markup.includes("1 roll shown"), "caption renders clean 1 roll shown");
+          t.ok(!markup.includes("roll$"), "caption omits literal $");
         } finally {
           root.unmount();
           host.remove();

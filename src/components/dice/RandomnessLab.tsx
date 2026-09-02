@@ -12,6 +12,8 @@ import {
   chartTicks,
   chaosLoaded,
   distributionSeries,
+  effectiveChaos,
+  effectiveLuck,
   estimateExpected,
   expectedFace,
   EXPECTED_SAMPLES,
@@ -145,8 +147,8 @@ export function RandomnessLab() {
     if (!showPoolExpected || !parsed) return null;
     return estimateExpected(
       parsed,
-      randomness.luck,
-      randomness.chaos,
+      effectiveLuck(randomness.luck),
+      effectiveChaos(randomness.chaos),
       bias,
       EXPECTED_SAMPLES,
     );
@@ -160,9 +162,12 @@ export function RandomnessLab() {
     randomness.seedLocked,
   );
   const ticks = sides ? chartTicks(sides) : undefined;
-  const luckDisplay = `${randomness.luck > 0 ? "+" : ""}${Math.round(randomness.luck * 100)}`;
-  const chaosDisplay = `${Math.round(randomness.chaos * 100)}`;
-  const streakDisplay = `${randomness.streak > 0 ? "+" : ""}${Math.round(randomness.streak * 100)}`;
+  const luckPct = Math.round(randomness.luck * 100) || 0;
+  const chaosPct = Math.round(randomness.chaos * 100) || 0;
+  const streakPct = Math.round(randomness.streak * 100) || 0;
+  const luckDisplay = `${luckPct > 0 ? "+" : ""}${luckPct}`;
+  const chaosDisplay = `${chaosPct}`;
+  const streakDisplay = `${streakPct > 0 ? "+" : ""}${streakPct}`;
 
   const curveSummary = useMemo(() => {
     if (!sides || mean === null || fair === null || series.length === 0) return null;
@@ -244,7 +249,7 @@ export function RandomnessLab() {
           id="factor-luck"
           label="Luck"
           hint="Bias toward low or high faces. At +100 a d20 averages about 16 instead of 10.5."
-          value={Math.round(randomness.luck * 100)}
+          value={luckPct}
           display={luckDisplay}
           valuetext={`Luck ${luckDisplay}`}
           min={-100}
@@ -258,7 +263,7 @@ export function RandomnessLab() {
           id="factor-chaos"
           label="Chaos"
           hint="50 is even odds. Lower bunches near the middle. Higher makes crits and fumbles more common."
-          value={Math.round(randomness.chaos * 100)}
+          value={chaosPct}
           display={chaosDisplay}
           valuetext={`Chaos ${chaosDisplay}`}
           min={0}
@@ -272,7 +277,7 @@ export function RandomnessLab() {
           id="factor-streak"
           label="Streak"
           hint="Reads recent rolls. Momentum keeps a hot streak hot. Revert makes the next rolls go cold. A Repeat batch uses the streak from before the click, so the scores don't feed each other."
-          value={Math.round(randomness.streak * 100)}
+          value={streakPct}
           display={streakDisplay}
           valuetext={`Streak ${streakDisplay}`}
           min={-100}

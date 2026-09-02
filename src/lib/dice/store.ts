@@ -256,10 +256,13 @@ export const useDiceStore = create<DiceState>((set, get) => {
     }
 
     if (get().soundEnabled) {
-      const lastRec = records[records.length - 1];
-      const hasCrit = lastRec?.dice.some((d) => d.kept && d.sides >= 20 && d.face === d.sides);
-      const hasFumble = lastRec?.dice.some((d) => d.kept && d.sides >= 20 && d.face === 1);
-      playDiceRollSound({ isCrit: Boolean(hasCrit), isFumble: Boolean(hasFumble) });
+      const hasCrit = records.some((r) =>
+        r.dice.some((d) => d.kept && (d.sign ?? 1) > 0 && d.sides >= 20 && d.face === d.sides),
+      );
+      const hasFumble = records.some((r) =>
+        r.dice.some((d) => d.kept && !d.exploded && (d.sign ?? 1) > 0 && d.sides >= 20 && d.face === 1),
+      );
+      playDiceRollSound({ isCrit: Boolean(hasCrit), isFumble: Boolean(!hasCrit && hasFumble) });
     }
 
     set({
@@ -397,7 +400,7 @@ export const useDiceStore = create<DiceState>((set, get) => {
         const parsed = parseNotation(notation);
         const derived = poolFromExpression(parsed);
         const pool = derived
-          ? sanitizePool({ ...get().pool, ...derived })
+          ? sanitizePool({ ...get().pool, ...derived, repeat: get().pool.repeat })
           : get().pool;
         set({ notation, pool, error: null, poolNotice: null });
         persist(get());

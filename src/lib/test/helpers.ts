@@ -112,7 +112,19 @@ export function withStore<T>(fn: () => T): T {
 }
 
 export function installMemoryStorage() {
-  if (typeof globalThis.localStorage !== "undefined") return;
+  try {
+    if (
+      typeof globalThis.localStorage !== "undefined" &&
+      typeof globalThis.localStorage.getItem === "function" &&
+      typeof globalThis.localStorage.setItem === "function"
+    ) {
+      globalThis.localStorage.setItem("__test__", "1");
+      globalThis.localStorage.removeItem("__test__");
+      return;
+    }
+  } catch {
+    /* fall through to install memory storage */
+  }
   const mem = new Map<string, string>();
   const storage: Storage = {
     getItem: (k) => (mem.has(k) ? (mem.get(k) ?? null) : null),
@@ -128,5 +140,5 @@ export function installMemoryStorage() {
       return mem.size;
     },
   };
-  Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
+  Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true, writable: true });
 }

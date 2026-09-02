@@ -51,13 +51,15 @@ export function DieFace({ die, rolling = false, delay = 0, size = "md" }: Props)
   const name = describeDie(die);
   const title = describeDieTitle(die);
 
+  const isPositive = sign > 0;
+
   return (
     <div className="flex flex-col items-center gap-1">
       <div
         className={cn(
           "relative",
-          isMax && die.kept && "[filter:drop-shadow(0_0_4px_var(--color-max))]",
-          isMin && die.kept && die.sides >= 20 && "[filter:drop-shadow(0_0_4px_var(--color-crit))]",
+          isMax && die.kept && isPositive && "[filter:drop-shadow(0_0_4px_var(--color-max))]",
+          isMin && die.kept && isPositive && !die.exploded && die.sides >= 20 && "[filter:drop-shadow(0_0_4px_var(--color-crit))]",
         )}
       >
         {sign < 0 ? (
@@ -79,8 +81,8 @@ export function DieFace({ die, rolling = false, delay = 0, size = "md" }: Props)
             size === "lg" && "size-16",
             !die.kept && "opacity-35",
             rolling && "die-tumble",
-            isMax && die.kept && "ring-1 ring-max/50",
-            isMin && die.kept && die.sides >= 20 && "ring-1 ring-crit/50",
+            isMax && die.kept && isPositive && "ring-1 ring-max/50",
+            isMin && die.kept && isPositive && !die.exploded && die.sides >= 20 && "ring-1 ring-crit/50",
           )}
           style={{ animationDelay: `${delay}ms` }}
           title={title}

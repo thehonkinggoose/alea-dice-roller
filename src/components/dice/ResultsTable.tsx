@@ -48,10 +48,14 @@ function factorChips(roll: RollRecord) {
   return chips;
 }
 
-function signedFaces(roll: RollRecord, keptOnly: boolean | null): string {
+export function signedFaces(roll: RollRecord, keptOnly: boolean | null): string {
   return roll.dice
     .filter((d) => (keptOnly === null ? true : keptOnly ? d.kept : !d.kept))
-    .map((d) => `${d.sign < 0 ? "-" : ""}${d.face}`)
+    .map((d) => {
+      const sign = d.sign < 0 ? "-" : "";
+      const mark = d.exploded ? (d.kept ? "!" : "!↓") : d.kept ? "" : "↓";
+      return `${sign}${d.face}${mark}`;
+    })
     .join(" ");
 }
 
@@ -166,7 +170,39 @@ const COLUMNS = [
   { key: "factors", label: "Factors", hint: "Luck, chaos, streak, or seed in effect" },
 ] as const;
 
-type FilterType = "all" | "crits" | "fumbles" | "loaded";
+export type FilterType = "all" | "crits" | "fumbles" | "loaded";
+
+export function filterHistory(
+  history: RollRecord[],
+  activeFilter: FilterType,
+  searchQuery: string,
+): RollRecord[] {
+  return history.filter((roll) => {
+    if (activeFilter === "crits") {
+      const hasCrit = roll.dice.some((d) => d.kept && (d.sign ?? 1) > 0 && d.face === d.sides);
+      if (!hasCrit) return false;
+    } else if (activeFilter === "fumbles") {
+      const hasFumble = roll.dice.some((d) => d.kept && (d.sign ?? 1) > 0 && !d.exploded && d.face === 1);
+      if (!hasFumble) return false;
+    } else if (activeFilter === "loaded") {
+      const flags = rollFactorFlags(roll);
+      if (!flags.luck && !flags.chaos && !flags.streak && !flags.seed) return false;
+    }
+
+    if (searchQuery.trim()) {
+      const rawQ = searchQuery.toLowerCase().trim().replace(/[−–—]/g, "-");
+      const compactQ = rawQ.replace(/\s+/g, "");
+      const compactNotation = roll.notation.toLowerCase().replace(/\s+/g, "");
+      const notationMatch = compactNotation.includes(compactQ) || roll.notation.toLowerCase().includes(rawQ);
+      const totalMatch = String(roll.total) === rawQ || String(roll.total) === compactQ;
+      const modMatch = roll.modifier !== 0 && (String(roll.modifier) === rawQ || `+${roll.modifier}` === rawQ);
+      const timeMatch = timeLabel(roll.at).toLowerCase().includes(rawQ);
+      if (!notationMatch && !totalMatch && !modMatch && !timeMatch) return false;
+    }
+
+    return true;
+  });
+}
 
 export function ResultsTable() {
   const history = useDiceStore((s) => s.history);
@@ -180,28 +216,7 @@ export function ResultsTable() {
   const [confirmClear, setConfirmClear] = useState(false);
 
   const filteredHistory = useMemo(() => {
-    return history.filter((roll) => {
-      if (activeFilter === "crits") {
-        const hasCrit = roll.dice.some((d) => d.kept && d.face === d.sides);
-        if (!hasCrit) return false;
-      } else if (activeFilter === "fumbles") {
-        const hasFumble = roll.dice.some((d) => d.kept && d.face === 1);
-        if (!hasFumble) return false;
-      } else if (activeFilter === "loaded") {
-        const flags = rollFactorFlags(roll);
-        if (!flags.luck && !flags.chaos && !flags.streak && !flags.seed) return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const notationMatch = roll.notation.toLowerCase().includes(q);
-        const totalMatch = String(roll.total) === q;
-        const timeMatch = timeLabel(roll.at).toLowerCase().includes(q);
-        if (!notationMatch && !totalMatch && !timeMatch) return false;
-      }
-
-      return true;
-    });
+    return filterHistory(history, activeFilter, searchQuery);
   }, [history, activeFilter, searchQuery]);
 
   const exportCsv = () => {
@@ -530,7 +545,7 @@ export function ResultsTable() {
             >
               <table className="data-table">
                 <caption className="sr-only">
-                  Roll history. {filteredHistory.length} roll${filteredHistory.length === 1 ? "" : "s"} shown.
+                  {`Roll history. ${filteredHistory.length} roll${filteredHistory.length === 1 ? "" : "s"} shown.`}
                 </caption>
                 <thead>
                   <tr className="border-y border-border text-xs text-subtle">
